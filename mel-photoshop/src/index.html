@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MelPhoto Studio Professional</title>
+  <title>MelPhoto Studio Professional - Adobe Photoshop Clone</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,32 +21,35 @@
     <!-- Edit -->
     <div class="ps-menu-item" onclick="undo()">Undo (Ctrl+Z)</div>
     <div class="ps-menu-item" onclick="redo()">Redo (Ctrl+Y)</div>
-    <!-- Adjustments -->
-    <div class="ps-menu-item" onclick="applyFilter('brightness')">Brightness/Contrast</div>
-    <div class="ps-menu-item" onclick="applyFilter('grayscale')">Desaturate</div>
-    <div class="ps-menu-item" onclick="applyFilter('sepia')">Sepia</div>
+    <div class="ps-menu-item" onclick="startFreeTransform()">Free Transform (Ctrl+T)</div>
+    <div class="ps-menu-item" onclick="deselect()">Deselect (Ctrl+D)</div>
+    <!-- Image / Adjustments -->
+    <div class="ps-menu-item" onclick="openAdjustDialog('brightness')">Brightness/Contrast...</div>
+    <div class="ps-menu-item" onclick="openAdjustDialog('hsv')">Hue/Saturation...</div>
     <div class="ps-menu-item" onclick="applyFilter('invert')">Invert (Ctrl+I)</div>
+    <div class="ps-menu-item" onclick="applyFilter('grayscale')">Desaturate</div>
     <div class="ps-menu-item" onclick="applyFilter('threshold')">Threshold</div>
     <!-- Filters -->
     <div class="ps-menu-item" onclick="applyFilter('sharpen')">Sharpen</div>
+    <div class="ps-menu-item" onclick="applyFilter('blur')">Box Blur</div>
     <div class="ps-menu-item" onclick="applyFilter('findEdges')">Find Edges</div>
     <div class="ps-menu-item" onclick="applyFilter('emboss')">Emboss</div>
-    <div class="ps-menu-item" onclick="applyFilter('blur')">Box Blur</div>
   </header>
 
-  <!-- Options Bar -->
-  <div class="ps-optionsbar">
-    <div class="opt-group">
+  <!-- Contextual Options Bar -->
+  <div class="ps-optionsbar" id="ps-optionsbar">
+    <!-- Common Brush Settings -->
+    <div class="opt-group" id="opt-group-brush">
       <label>Size:</label>
-      <input type="range" id="opt-size-slider" min="1" max="100" value="15" oninput="updateBrushSize(this.value)" style="width: 70px;">
-      <span id="lbl-brush-size" style="font-size: 11px; width: 24px;">15px</span>
+      <input type="range" id="opt-size-slider" min="1" max="120" value="15" oninput="updateBrushSize(this.value)" style="width: 70px;">
+      <span id="lbl-brush-size" style="font-size: 11px; width: 28px;">15px</span>
     </div>
-    <div class="opt-group">
+    <div class="opt-group" id="opt-group-opacity">
       <label>Opacity:</label>
       <input type="range" id="opt-opacity-slider" min="1" max="100" value="100" oninput="updateBrushOpacity(this.value)" style="width: 70px;">
-      <span id="lbl-brush-opacity" style="font-size: 11px; width: 30px;">100%</span>
+      <span id="lbl-brush-opacity" style="font-size: 11px; width: 32px;">100%</span>
     </div>
-    <div class="opt-group">
+    <div class="opt-group" id="opt-group-blend">
       <label>Mode:</label>
       <select class="opt-select" id="opt-blend-mode" onchange="updateBrushBlend(this.value)">
         <option value="source-over">Normal</option>
@@ -57,6 +60,17 @@
         <option value="lighten">Lighten</option>
         <option value="difference">Difference</option>
       </select>
+    </div>
+    <!-- Wand / Bucket Tolerance -->
+    <div class="opt-group" id="opt-group-tolerance" style="display: none;">
+      <label>Tolerance:</label>
+      <input type="number" id="opt-tolerance" min="0" max="255" value="32" style="width: 45px; background: #222; color:white; border:1px solid #444; font-size:11px;" onchange="updateTolerance(this.value)">
+    </div>
+    <!-- Free Transform Actions -->
+    <div class="opt-group" id="opt-group-transform" style="display: none; background: #0284c7; padding: 2px 8px; border-radius: 3px;">
+      <span style="font-size: 11px; font-weight: bold; color: white;">Free Transform:</span>
+      <button class="btn-ps-mini" onclick="commitFreeTransform()">✓ Commit (Enter)</button>
+      <button class="btn-ps-mini" onclick="cancelFreeTransform()">✕ Cancel (Esc)</button>
     </div>
   </div>
 
@@ -80,10 +94,10 @@
         <button class="btn-ps-tool" id="tool-gradient" onclick="setTool('gradient')" title="Gradient Tool">∇</button>
         <button class="btn-ps-tool" id="tool-blur" onclick="setTool('blur')" title="Blur Tool">💧</button>
         <button class="btn-ps-tool" id="tool-dodge" onclick="setTool('dodge')" title="Dodge Tool (O)">O</button>
-        <button class="btn-ps-tool" id="tool-text" onclick="setTool('text')" title="Text Tool (T)">T</button>
+        <button class="btn-ps-tool" id="tool-text" onclick="setTool('text')" title="Horizontal Type (T)">T</button>
         <button class="btn-ps-tool" id="tool-rect" onclick="setTool('rect')" title="Rectangle Shape (U)">▭</button>
         <button class="btn-ps-tool" id="tool-oval" onclick="setTool('oval')" title="Ellipse Shape (U)">○</button>
-        <button class="btn-ps-tool" id="tool-hand" onclick="setTool('hand')" title="Hand Tool (H)">✋</button>
+        <button class="btn-ps-tool" id="tool-hand" onclick="setTool('hand')" title="Hand / Pan (H)">✋</button>
       </div>
 
       <!-- Color Chips -->
@@ -94,10 +108,11 @@
       </div>
     </aside>
 
-    <!-- Center Viewport -->
-    <main class="ps-viewport">
+    <!-- Center Viewport with Canvas and Selection Overlay -->
+    <main class="ps-viewport" id="ps-viewport">
       <div class="canvas-shadow-box" id="canvas-container">
         <canvas id="canvas-main" width="800" height="600"></canvas>
+        <canvas id="canvas-overlay" width="800" height="600" style="position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
       </div>
     </main>
 
@@ -107,7 +122,7 @@
       <!-- Color Swatches Section -->
       <div class="ps-dock-section">
         <div class="dock-header">Color Swatches</div>
-        <div style="padding: 8px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+        <div style="padding: 6px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px;">
           <div style="background:#000000; height:18px; border-radius:2px; cursor:pointer;" onclick="setFgColor('#000000')"></div>
           <div style="background:#ffffff; height:18px; border-radius:2px; cursor:pointer; border:1px solid #555;" onclick="setFgColor('#ffffff')"></div>
           <div style="background:#ef4444; height:18px; border-radius:2px; cursor:pointer;" onclick="setFgColor('#ef4444')"></div>
@@ -123,7 +138,7 @@
       <div class="ps-dock-section">
         <div class="dock-header">History</div>
         <div class="history-list" id="history-list">
-          <!-- History items rendered dynamically -->
+          <!-- Rendered dynamically -->
         </div>
       </div>
 
@@ -161,6 +176,20 @@
 
     </aside>
 
+  </div>
+
+  <!-- Adjustment Dialog Modal -->
+  <div class="ps-modal" id="adjustment-modal" style="display: none;">
+    <div class="ps-modal-dialog">
+      <div class="ps-modal-header" id="modal-title">Brightness & Contrast</div>
+      <div class="ps-modal-body" id="modal-body">
+        <!-- Rendered controls -->
+      </div>
+      <div class="ps-modal-footer">
+        <button class="btn-ps-mini" onclick="applyAdjustmentModal()">OK</button>
+        <button class="btn-ps-mini" onclick="closeAdjustmentModal()">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- Status Bar -->

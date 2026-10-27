@@ -338,3 +338,49 @@ body {
   font-size: 11px;
   color: #888888;
 }
+
+/* Photoshop Adjustments Modal */
+.ps-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ps-modal-dialog {
+  background: #2b2b2b;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.7);
+  width: 320px;
+  overflow: hidden;
+}
+
+.ps-modal-header {
+  background: #202020;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #38bdf8;
+  border-bottom: 1px solid #383838;
+}
+
+.ps-modal-body {
+  padding: 14px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ps-modal-footer {
+  background: #242424;
+  padding: 8px 12px;
+  border-top: 1px solid #383838;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
