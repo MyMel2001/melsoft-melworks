@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MelFlash Professional - Flash Studio</title>
+  <title>MelFlash Professional - Adobe Flash Studio</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,14 +13,20 @@
       <span class="brand-flash-badge">FL</span>
       <span>MelFlash Pro</span>
     </div>
+    <!-- File -->
     <div class="menu-item" onclick="newProject()">New</div>
     <div class="menu-item" onclick="triggerOpenFla()">Open FLA...</div>
     <div class="menu-item" onclick="saveFla()">Save FLA</div>
     <div class="menu-item" onclick="exportSwf()" style="color: #fb923c; font-weight: bold;">Export SWF (v19)</div>
     <div class="menu-item" onclick="triggerDisassembleSwf()">Disassemble SWF...</div>
+    <!-- Insert / Animation -->
     <div class="menu-item" onclick="insertKeyframe()">Insert Keyframe (F6)</div>
-    <div class="menu-item" onclick="convertSelectionToSymbol()">Convert to Symbol (F8)</div>
-    <div class="menu-item" onclick="togglePlay()" style="margin-left: auto;">▶ Test / Play (Enter)</div>
+    <div class="menu-item" onclick="insertBlankKeyframe()">Blank Keyframe (F7)</div>
+    <div class="menu-item" onclick="createClassicTween()">Create Classic Tween</div>
+    <div class="menu-item" onclick="promptConvertSymbol()">Convert to Symbol (F8)</div>
+    <!-- Control -->
+    <div class="menu-item" onclick="testMovie()" style="color: #38bdf8; font-weight: bold; margin-left: auto;">⚡ Test Movie (Ctrl+Enter)</div>
+    <div class="menu-item" onclick="togglePlay()">▶ Play (Enter)</div>
   </header>
 
   <!-- Studio Layout -->
@@ -32,23 +38,29 @@
         <div class="playback-controls">
           <button class="btn-ctrl" onclick="rewindTimeline()" title="Rewind">|◀</button>
           <button class="btn-ctrl" onclick="stepFrame(-1)" title="Step Back">◀</button>
-          <button class="btn-ctrl" id="btn-play" onclick="togglePlay()" title="Play">▶ Play</button>
+          <button class="btn-ctrl" id="btn-play" onclick="togglePlay()" title="Play / Pause">▶ Play</button>
           <button class="btn-ctrl" onclick="stepFrame(1)" title="Step Forward">▶</button>
-          <button class="btn-ctrl" id="btn-loop" onclick="toggleLoop()" title="Loop">🔁 Loop</button>
+          <button class="btn-ctrl active" id="btn-loop" onclick="toggleLoop()" title="Loop Playback">🔁 Loop</button>
           <button class="btn-ctrl" id="btn-onion" onclick="toggleOnionSkin()" title="Onion Skin">🧅 Onion Skin</button>
         </div>
 
-        <div style="display: flex; gap: 14px; font-size: 11px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn-ctrl" onclick="insertKeyframe()" title="Insert Keyframe (F6)">+KF (F6)</button>
+          <button class="btn-ctrl" onclick="insertBlankKeyframe()" title="Insert Blank Keyframe (F7)">+Blank (F7)</button>
+          <button class="btn-ctrl" onclick="createClassicTween()" title="Create Motion Tween">Tween</button>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 11px; align-items: center; margin-left: auto;">
           <span>Current Frame: <strong id="lbl-current-frame" style="color: #f97316;">1</strong></span>
           <span>FPS:
-            <select id="sel-fps" onchange="changeFps(this.value)" style="background:#222; color:white; border:1px solid #444; border-radius:3px;">
+            <select id="sel-fps" onchange="changeFps(this.value)" style="background:#222; color:white; border:1px solid #444; border-radius:3px; padding: 1px 4px;">
               <option value="12">12</option>
               <option value="24" selected>24</option>
               <option value="30">30</option>
               <option value="60">60</option>
             </select>
           </span>
-          <span id="lbl-elapsed">0.0s</span>
+          <span id="lbl-elapsed">0.00s</span>
         </div>
       </div>
 
@@ -57,9 +69,9 @@
         <div class="timeline-layers">
           <div class="layers-header">
             <span>Layers</span>
-            <div>
-              <button class="btn-ctrl" onclick="addNewLayer()" title="New Layer" style="padding: 1px 4px;">+</button>
-              <button class="btn-ctrl" onclick="deleteActiveLayer()" title="Delete Layer" style="padding: 1px 4px;">-</button>
+            <div style="display: flex; gap: 2px;">
+              <button class="btn-ctrl" onclick="addNewLayer()" title="New Layer" style="padding: 1px 5px;">+</button>
+              <button class="btn-ctrl" onclick="deleteActiveLayer()" title="Delete Layer" style="padding: 1px 5px;">-</button>
             </div>
           </div>
           <div class="layers-list" id="layers-list">
@@ -86,12 +98,12 @@
     <!-- Center Workspace -->
     <div class="workspace-container">
 
-      <!-- Left Tools Palette -->
+      <!-- Left Tools Palette (Flash Classic 2-Column) -->
       <aside class="tools-palette">
         <div class="tool-grid">
-          <button class="btn-flash-tool active" id="tool-select" onclick="setTool('select')" title="Selection Tool (V)">V</button>
+          <button class="btn-flash-tool" id="tool-select" onclick="setTool('select')" title="Selection Tool (V)">V</button>
           <button class="btn-flash-tool" id="tool-subselect" onclick="setTool('subselect')" title="Subselection Tool (A)">A</button>
-          <button class="btn-flash-tool" id="tool-transform" onclick="setTool('transform')" title="Free Transform (Q)">Q</button>
+          <button class="btn-flash-tool active" id="tool-transform" onclick="setTool('transform')" title="Free Transform (Q)">Q</button>
           <button class="btn-flash-tool" id="tool-line" onclick="setTool('line')" title="Line Tool (N)">N</button>
           <button class="btn-flash-tool" id="tool-pencil" onclick="setTool('pencil')" title="Pencil Tool (Y)">Y</button>
           <button class="btn-flash-tool" id="tool-brush" onclick="setTool('brush')" title="Brush Tool (B)">B</button>
@@ -103,6 +115,7 @@
           <button class="btn-flash-tool" id="tool-eyedropper" onclick="setTool('eyedropper')" title="Eyedropper (I)">I</button>
         </div>
 
+        <!-- Color Swatches -->
         <div class="color-controls">
           <div style="font-size: 9px; color: var(--flash-text-dim);">Stroke</div>
           <div class="color-swatch-box" id="swatch-stroke" style="background-color: #000000;">
@@ -113,7 +126,14 @@
             <input type="color" id="picker-fill" onchange="changeFillColor(this.value)" value="#f97316">
           </div>
           <div style="font-size: 9px; color: var(--flash-text-dim);">Width</div>
-          <input type="number" id="stroke-width-input" value="2" min="1" max="20" style="width: 32px; background: #222; color:white; border:1px solid #444; font-size:10px; text-align:center;" onchange="changeStrokeWidth(this.value)">
+          <input type="number" id="stroke-width-input" value="2" min="1" max="20" style="width: 34px; background: #222; color:white; border:1px solid #444; font-size:10px; text-align:center;" onchange="changeStrokeWidth(this.value)">
+        </div>
+
+        <!-- Tool Modifiers (Flash Magnet Snap, Smooth, Straighten) -->
+        <div class="flash-modifiers">
+          <button class="btn-mod active" id="mod-snap" onclick="toggleSnap()" title="Snap to Objects">🧲</button>
+          <button class="btn-mod" onclick="smoothSelected()" title="Smooth">〰</button>
+          <button class="btn-mod" onclick="straightenSelected()" title="Straighten">━</button>
         </div>
       </aside>
 
@@ -129,12 +149,12 @@
         <div class="dock-tabs">
           <div class="dock-tab active" onclick="switchDockTab('properties')">Properties</div>
           <div class="dock-tab" onclick="switchDockTab('library')">Library</div>
-          <div class="dock-tab" onclick="switchDockTab('actions')">Actions (AS2/3)</div>
+          <div class="dock-tab" onclick="switchDockTab('actions')">Actions (AS3)</div>
         </div>
 
         <!-- Properties Panel Body -->
         <div class="dock-body" id="panel-properties">
-          <h4 style="margin-bottom: 12px; color: #f97316;">Stage Properties</h4>
+          <h4 style="margin-bottom: 10px; color: #f97316; font-size: 12px;">Stage Properties</h4>
           <div class="prop-row">
             <label>Dimensions:</label>
             <div style="display: flex; gap: 4px; width: 120px;">
@@ -152,21 +172,25 @@
             <input type="number" id="stage-fps-input" value="24" onchange="changeFps(this.value)">
           </div>
 
-          <hr style="border:0; border-top: 1px solid #444; margin: 16px 0;">
+          <hr style="border:0; border-top: 1px solid #3a3a3a; margin: 12px 0;">
 
-          <h4 style="margin-bottom: 12px; color: #f97316;">Object Inspector</h4>
+          <h4 style="margin-bottom: 8px; color: #f97316; font-size: 12px;">Object Inspector</h4>
           <div id="inspector-content" style="color: var(--flash-text-dim); font-size: 11px;">
-            No shape selected. Click on a shape with the Selection tool (V) to inspect and edit.
+            No shape selected. Click on a shape with Selection (V) or Transform (Q) tool to edit.
           </div>
         </div>
 
         <!-- Library Panel Body -->
         <div class="dock-body" id="panel-library" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h4 style="color: #f97316;">Symbol Library</h4>
-            <button class="btn-ctrl" onclick="createNewSymbol()">+ New</button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="color: #f97316; font-size: 12px;">Symbol Library</h4>
+            <button class="btn-ctrl" onclick="promptConvertSymbol()">+ New (F8)</button>
           </div>
-          <div id="library-list" style="border: 1px solid #444; height: 200px; background:#222; overflow-y:auto; padding: 4px; margin-bottom: 10px;">
+          <!-- Symbol Preview Box -->
+          <div id="symbol-preview-box" style="width: 100%; height: 90px; background: #1a1a1a; border: 1px solid #333; margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
+            <canvas id="symbol-preview-canvas" width="180" height="80"></canvas>
+          </div>
+          <div id="library-list" style="border: 1px solid #444; height: 160px; background:#1e1e1e; overflow-y:auto; padding: 4px; margin-bottom: 8px;">
             <!-- Rendered symbols -->
           </div>
           <button class="btn-ctrl" style="width: 100%; justify-content: center;" onclick="placeSelectedSymbol()">Place Instance on Stage</button>
@@ -174,21 +198,40 @@
 
         <!-- Actions Panel Body -->
         <div class="dock-body" id="panel-actions" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <h4 style="color: #f97316;">ActionScript</h4>
-            <div style="display: flex; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <h4 style="color: #f97316; font-size: 12px;">ActionScript 3.0 / 2.0</h4>
+            <div style="display: flex; gap: 3px;">
               <button class="btn-ctrl" onclick="insertCodeSnippet('stop();')">stop()</button>
               <button class="btn-ctrl" onclick="insertCodeSnippet('play();')">play()</button>
               <button class="btn-ctrl" onclick="insertCodeSnippet('gotoAndPlay(1);')">goto(1)</button>
             </div>
           </div>
           <textarea class="actionscript-editor" id="actionscript-input" placeholder="// ActionScript for current keyframe&#10;stop();" oninput="saveCurrentFrameActions()"></textarea>
+          <button class="btn-ctrl" style="margin-top: 6px; width: 100%; justify-content: center;" onclick="checkActionScriptSyntax()">✓ Check Syntax</button>
         </div>
 
       </aside>
 
     </div>
 
+  </div>
+
+  <!-- Test Movie Modal (Ctrl+Enter) -->
+  <div class="test-movie-modal" id="test-movie-modal" style="display: none;">
+    <div class="test-movie-dialog">
+      <div class="test-movie-header">
+        <span>Adobe Flash Player 19 - Test Movie</span>
+        <button class="btn-ctrl" onclick="closeTestMovie()">✕</button>
+      </div>
+      <div class="test-movie-body">
+        <canvas id="test-movie-canvas" width="800" height="600"></canvas>
+      </div>
+      <div class="test-movie-footer">
+        <button class="btn-ctrl" onclick="toggleTestMoviePlay()" id="btn-test-play">⏸ Pause</button>
+        <button class="btn-ctrl" onclick="rewindTestMovie()">|◀ Rewind</button>
+        <span id="test-movie-status" style="font-size: 11px; color: #888; margin-left: auto;">800x600 @ 24 fps</span>
+      </div>
+    </div>
   </div>
 
   <!-- Status Bar -->
