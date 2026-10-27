@@ -1,0 +1,39 @@
+The FLA format
+Submitted by bwy on Fri, 11.12.2009 - 11:35, archive url: https://web.archive.org/web/20130126025739/http://benjaminwolsey.de/node/49
+
+    Flash Free Software fla 
+
+The Adobe Creative Suite, the most widely-used tool for creating Flash movies, has long used a secret proprietary format known by its extension "fla" to store projects.
+
+These files, if they represent the current state of a project, must contain more than enough information to compile a SWF, but because the format is closed and secret, free software programmes cannot use them.
+
+Newer versions of Creative Suite can also use an XML-based format to save their data. This is an improvement because it is human-readable (though I haven't yet seen one that contains as much information as an fla file), but still most Flash sources on the web are published in the fla format.
+
+However, a few things are known about this format, and it is enough to start to analyse it. Most importantly, it's known that the format uses the Microsoft Compound Binary File format. This is a way to store several files in a single archive.
+
+The good news is that a free programme, 7zip, is capable of unpacking those files. Just by doing:
+
+7z e file.fla
+
+you will get a set of files. These include a "Contents" file as well as several others with interesting names, for instance:
+
+Contents
+M 1 1216485710 
+M 2 1216485711
+M 3 1216485711
+M 4 1216485711
+M 5 1216485711
+P 1 1216485710
+S 6 1216485711
+
+The "Contents" file seems like the best place to start. A little analysis of the content suggests it is organized into a short file header, then a number of principle sections.
+
+The first section is the CDocumentPage part. This appears to reference all the scenes and characters in the movie. The first reference is to one of the files starting with "P". In the above example there is only one, but there can be many more. Following this come references to the files starting with "S". From the text in those sections, the S files refer to Symbols, the P files to Pages. We can call these Page and Symbol files together "movie elements".
+
+Each of these "movie element" sections contains a set of subsections separated by byte markers. The first subsection contains a variable-length string. This almost certainly is the name of the element within the movie. Following that is a set of subsections with no obvious meaning, though the layout and length of the subsections is generally very similar.
+
+Following this may be a CMediaBits section. This references files beginning with "M" and sometimes appears to provide a large amount of what looks like configuration data, generally all stored as strings.
+
+Finally, the CQTAudioSettings section is present. After that may come other data that isn't part of the section, but so far I haven't been able to analyse that.
+
+It's also notable that there are at least two different fla formats. The one described here is the newer format, which differs from the older one by using different byte markers and UTF-16 strings.

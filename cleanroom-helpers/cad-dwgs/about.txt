@@ -1,0 +1,3 @@
+These are for reverse engineering these CAD files (DWG files) into a CAD
+program like AutoCAD for MelSoft MelWorks. Inspect the contents, try
+to understand how they are made and what they are, and go from there.
