@@ -1,0 +1,14 @@
+{
+  "name": "mel-photoshop",
+  "version": "1.0.0",
+  "description": "MelPhoto Studio - Professional Adobe Photoshop Clone with Native PSD RLE/PackBits Support",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^24.2.2"
+  }
+}
