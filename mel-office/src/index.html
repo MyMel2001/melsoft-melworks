@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MelOffice 365 Professional</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Title bar & App Switcher -->
+  <header class="titlebar" id="titlebar">
+    <div class="brand">
+      <div class="brand-icon" id="brand-icon">W</div>
+      <span id="brand-text">MelWord - MelOffice 365</span>
+    </div>
+
+    <div class="app-switcher">
+      <button class="app-btn active" id="btn-switch-word" onclick="switchApp('word')">MelWord (DOCX)</button>
+      <button class="app-btn" id="btn-switch-excel" onclick="switchApp('excel')">MelExcel (XLSX)</button>
+      <button class="app-btn" id="btn-switch-ppt" onclick="switchApp('ppt')">MelPowerPoint (PPTX)</button>
+    </div>
+
+    <div style="font-size: 11px; opacity: 0.85;">ECMA-376 Compliant</div>
+  </header>
+
+  <!-- Ribbon Menu -->
+  <nav class="ribbon">
+    <div class="ribbon-tabs">
+      <div class="ribbon-tab active" onclick="switchRibbonTab('home')">Home</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('insert')">Insert</div>
+      <div class="ribbon-tab" id="tab-app-specific" onclick="switchRibbonTab('specific')">Layout & Style</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('file')">File & Export</div>
+    </div>
+
+    <!-- Home Tab Content -->
+    <div class="ribbon-content" id="ribbon-home">
+      <!-- File Operations -->
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="newDocument()">📄 New</button>
+        <button class="btn-tool" onclick="triggerOpen()">📂 Open</button>
+        <button class="btn-tool" onclick="saveDocument()">💾 Save</button>
+      </div>
+
+      <!-- Text Formatting (Word / PPT) -->
+      <div class="ribbon-group" id="group-text-formatting">
+        <button class="btn-tool" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
+        <button class="btn-tool" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
+        <button class="btn-tool" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
+        <button class="btn-tool" onclick="formatDoc('strikeThrough')" title="Strike"><s>S</s></button>
+        <select class="tool-select" onchange="formatDoc('fontName', this.value)">
+          <option value="Arial">Arial</option>
+          <option value="Calibri" selected>Calibri</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+        </select>
+        <select class="tool-select" onchange="formatDoc('fontSize', this.value)">
+          <option value="1">8 pt</option>
+          <option value="2">10 pt</option>
+          <option value="3" selected>12 pt</option>
+          <option value="4">14 pt</option>
+          <option value="5">18 pt</option>
+          <option value="6">24 pt</option>
+          <option value="7">36 pt</option>
+        </select>
+        <input type="color" class="tool-input" title="Text Color" onchange="formatDoc('foreColor', this.value)" value="#1e293b">
+      </div>
+
+      <!-- Alignment & Lists -->
+      <div class="ribbon-group" id="group-alignment">
+        <button class="btn-tool" onclick="formatDoc('justifyLeft')" title="Align Left">⇤</button>
+        <button class="btn-tool" onclick="formatDoc('justifyCenter')" title="Align Center">≡</button>
+        <button class="btn-tool" onclick="formatDoc('justifyRight')" title="Align Right">⇥</button>
+        <button class="btn-tool" onclick="formatDoc('insertUnorderedList')" title="Bullet List">• List</button>
+        <button class="btn-tool" onclick="formatDoc('insertOrderedList')" title="Numbered List">1. List</button>
+      </div>
+
+      <!-- Excel Quick Ops -->
+      <div class="ribbon-group" id="group-excel-quick" style="display: none;">
+        <button class="btn-tool" onclick="applyExcelFormat('currency')">$ Currency</button>
+        <button class="btn-tool" onclick="applyExcelFormat('percent')">% Percent</button>
+        <button class="btn-tool" onclick="insertExcelSum()">∑ AutoSum</button>
+      </div>
+
+      <!-- PPT Quick Ops -->
+      <div class="ribbon-group" id="group-ppt-quick" style="display: none;">
+        <button class="btn-tool" onclick="addNewSlide()">➕ Add Slide</button>
+        <button class="btn-tool" onclick="deleteCurrentSlide()">🗑 Delete Slide</button>
+        <button class="btn-tool" onclick="startSlideShow()" style="background:#fee2e2; border-color:#fca5a5; color:#b91c1c;">▶ Slide Show (F5)</button>
+      </div>
+    </div>
+
+    <!-- Insert Tab Content -->
+    <div class="ribbon-content" id="ribbon-insert" style="display: none;">
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="insertTable()">📊 Insert Table (3x3)</button>
+        <button class="btn-tool" onclick="insertHeading(1)">H1 Heading</button>
+        <button class="btn-tool" onclick="insertHeading(2)">H2 Subheading</button>
+        <button class="btn-tool" onclick="insertHorizontalRule()">― Line Divider</button>
+      </div>
+      <div class="ribbon-group" id="group-word-art-borders">
+        <span style="font-size: 11px; font-weight:600;">Art Border:</span>
+        <select class="tool-select" id="select-art-border" onchange="applyArtBorder(this.value)">
+          <option value="none">None</option>
+          <option value="woodwork">Woodwork (ECMA-376)</option>
+          <option value="zanyTriangles">Zany Triangles (ECMA-376)</option>
+          <option value="zigZag">ZigZag Stitch (ECMA-376)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Layout & Style Tab Content -->
+    <div class="ribbon-content" id="ribbon-specific" style="display: none;">
+      <div class="ribbon-group">
+        <span style="font-size: 11px; font-weight:600;">Page / Theme:</span>
+        <select class="tool-select" id="theme-select" onchange="changeTheme(this.value)">
+          <option value="modern">Modern Office</option>
+          <option value="classic">Classic Executive</option>
+          <option value="dark">Dark Slate</option>
+        </select>
+      </div>
+      <div class="ribbon-group" id="group-ppt-layout" style="display:none;">
+        <span style="font-size: 11px; font-weight:600;">Slide BG:</span>
+        <input type="color" class="tool-input" id="slide-bg-picker" onchange="changeSlideBackground(this.value)" value="#ffffff">
+      </div>
+    </div>
+
+    <!-- File & Export Tab Content -->
+    <div class="ribbon-content" id="ribbon-file" style="display: none;">
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="exportNativeFile()">⬇ Export (.docx / .xlsx / .pptx)</button>
+        <button class="btn-tool" onclick="exportJSON()">⬇ Export Project JSON</button>
+        <button class="btn-tool" onclick="window.print()">🖨 Print / PDF</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Workspace Container -->
+  <main class="workspace" id="workspace">
+
+    <!-- MelWord Workspace -->
+    <div class="doc-canvas" id="doc-canvas" contenteditable="true" spellcheck="false">
+      <h1 style="color: #1a73e8; text-align: center;">MelOffice Document</h1>
+      <p style="text-align: center; color: #64748b; font-size: 14px;">ECMA-376 Office Open XML Standard Compliant</p>
+      <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 16px 0;">
+      <p>Welcome to <b>MelWord</b>, part of the complete <b>MelOffice 365</b> suite.</p>
+      <p>This editor natively generates and interprets strict <b>WordprocessingML (wml.xsd)</b> packages adhering to the ISO/IEC 29500 and ECMA-376 standard.</p>
+      <br>
+      <h2>Standard Art Borders & Styling</h2>
+      <p>Use the <i>Insert &gt; Art Border</i> selector above to apply authentic OpenXML borders such as <b>Woodwork</b> and <b>Zany Triangles</b>.</p>
+      <br>
+      <table border="1" style="width: 100%; border-collapse: collapse; border-color: #cbd5e1; text-align: left;">
+        <thead>
+          <tr style="background: #f1f5f9;">
+            <th style="padding: 8px;">Feature</th>
+            <th style="padding: 8px;">Standard</th>
+            <th style="padding: 8px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">Rich Text Formatting</td>
+            <td style="padding: 8px;">w:rPr / w:pPr</td>
+            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">Art Borders</td>
+            <td style="padding: 8px;">w:pBdr</td>
+            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">OPC ZIP Packaging</td>
+            <td style="padding: 8px;">ECMA-376-2</td>
+            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MelExcel Workspace -->
+    <div class="excel-container" id="excel-container">
+      <div class="excel-fx-bar">
+        <input type="text" class="cell-coord" id="selected-cell-id" value="A1" readonly>
+        <span class="fx-label">fx</span>
+        <input type="text" class="fx-input" id="fx-bar" placeholder="Enter value or formula e.g. =SUM(B2:B5) or =B2*C2" onkeydown="handleFxKey(event)">
+      </div>
+      <div class="excel-grid-scroll">
+        <table class="excel-grid" id="excel-table">
+          <!-- Dynamically generated rows and columns -->
+        </table>
+      </div>
+    </div>
+
+    <!-- MelPowerPoint Workspace -->
+    <div class="ppt-container" id="ppt-container">
+      <aside class="ppt-deck" id="ppt-deck">
+        <!-- Slide thumbnails rendered dynamically -->
+      </aside>
+      <section class="ppt-main">
+        <div class="slide-stage" id="slide-stage">
+          <div class="slide-title" id="slide-title" contenteditable="true" spellcheck="false">MelOffice Presentation</div>
+          <div class="slide-subtitle" id="slide-subtitle" contenteditable="true" spellcheck="false">ECMA-376 PresentationML Slide Deck</div>
+          <div class="slide-body" id="slide-body" contenteditable="true" spellcheck="false">
+            <p>• Full native support for PresentationML (pml.xsd)</p>
+            <p>• Dynamic multi-slide presentation manager</p>
+            <p>• Export directly to Microsoft PowerPoint .pptx files</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Slide Show Full Screen Modal -->
+  <div class="slideshow-modal" id="slideshow-modal" onclick="nextSlideShowSlide()" onkeydown="handleSlideShowKey(event)" tabindex="0">
+    <div class="slideshow-content" id="slideshow-content">
+      <h1 id="show-title" style="font-size: 48px; margin-bottom: 20px;"></h1>
+      <h3 id="show-subtitle" style="font-size: 28px; color: #475569; margin-bottom: 30px;"></h3>
+      <div id="show-body" style="font-size: 22px; line-height: 1.6;"></div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <footer class="statusbar">
+    <span id="status-left">MelOffice 365 | Ready</span>
+    <span id="status-right">100% ECMA-376 Compliant</span>
+  </footer>
+
+  <!-- Hidden File Input for Open -->
+  <input type="file" id="file-input" style="display: none;" onchange="handleFileOpen(event)">
+
+  <script src="../node_modules/jszip/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

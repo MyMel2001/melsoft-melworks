@@ -1,0 +1,17 @@
+{
+  "name": "mel-office",
+  "version": "1.0.0",
+  "description": "MelOffice 365 - Professional Office Suite Clone (MelWord, MelExcel, MelPowerPoint)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "electron": "^24.2.2"
+  }
+}
