@@ -1,4 +1,6 @@
-// MelFlash SWF Binary Encoder & Decoder (Adobe SWF Specification v19 Compliant)
+// MelFlash SWF Binary Encoder & Decoder (Adobe SWF Specification v19 Compliant with AS3 / AVM2)
+
+const As3Engine = (typeof require !== 'undefined') ? require('./as3') : (typeof window !== 'undefined' ? window.As3Engine : null);
 
 class BitWriter {
   constructor() {
@@ -72,7 +74,13 @@ class BitWriter {
   writeBytes(buf) {
     this.flushByte();
     this.ensureCapacity(buf.length);
-    buf.copy(this.buffer, this.byteLength);
+    if (Buffer.isBuffer(buf)) {
+      buf.copy(this.buffer, this.byteLength);
+    } else {
+      for (let i = 0; i < buf.length; i++) {
+        this.buffer[this.byteLength + i] = buf[i];
+      }
+    }
     this.byteLength += buf.length;
     this.bitPos = this.byteLength * 8;
   }
@@ -85,12 +93,14 @@ class BitWriter {
 
 class SwfMovie {
   constructor(options = {}) {
-    this.version = options.version || 10;
+    this.version = options.version || 19;
     this.width = options.width || 800; // in pixels
     this.height = options.height || 600; // in pixels
     this.fps = options.fps || 24;
     this.backgroundColor = options.backgroundColor || { r: 255, g: 255, b: 255 };
     this.frames = options.frames || []; // Array of frame objects { elements: [], actions: [] }
+    this.as3 = (options.as3 !== undefined) ? options.as3 : true;
+    this.documentClass = options.documentClass || 'Main';
   }
 
   static encodeRect(xMinPx, xMaxPx, yMinPx, yMaxPx) {
@@ -129,6 +139,42 @@ class SwfMovie {
       header.writeUInt16LE(codeAndLen, 0);
     }
     return dataBuf && dataBuf.length > 0 ? Buffer.concat([header, dataBuf]) : header;
+  }
+
+  // Tag 69: FileAttributes (Required for SWF 8+, bit 3 is ActionScript 3.0 flag)
+  static encodeFileAttributes(hasMetadata = false, isAS3 = true, useNetwork = false, useDirectBlit = false, useGPU = false) {
+    let b0 = 0;
+    if (useDirectBlit) b0 |= 0x40;
+    if (useGPU) b0 |= 0x20;
+    if (hasMetadata) b0 |= 0x10;
+    if (isAS3) b0 |= 0x08;
+    if (useNetwork) b0 |= 0x01;
+    const buf = Buffer.from([b0, 0x00, 0x00, 0x00]);
+    return SwfMovie.encodeTag(69, buf);
+  }
+
+  // Tag 76: SymbolClass (Associates symbols & main timeline with AS3 classes)
+  static encodeSymbolClass(symbols = [{ tagId: 0, className: 'Main' }]) {
+    const bw = new BitWriter();
+    bw.writeUI16(symbols.length);
+    for (const sym of symbols) {
+      bw.writeUI16(sym.tagId || 0);
+      const nameBuf = Buffer.from((sym.className || 'Main') + '\0', 'utf8');
+      bw.writeBytes(nameBuf);
+    }
+    return SwfMovie.encodeTag(76, bw.toBuffer());
+  }
+
+  // Tag 82: DoABC (Delivers ActionScript 3.0 AVM2 bytecode block)
+  static encodeDoABC(flags = 0, name = 'frame_1', abcBuffer) {
+    const bw = new BitWriter();
+    bw.writeUI32(flags);
+    const nameBuf = Buffer.from((name || '') + '\0', 'utf8');
+    bw.writeBytes(nameBuf);
+    if (abcBuffer) {
+      bw.writeBytes(abcBuffer);
+    }
+    return SwfMovie.encodeTag(82, bw.toBuffer());
   }
 
   static encodeSetBackgroundColor(r, g, b) {
@@ -176,8 +222,8 @@ class SwfMovie {
     return SwfMovie.encodeTag(0, Buffer.alloc(0));
   }
 
+  // SWF Tag 12: DoAction (ActionScript 1.0/2.0 fallback)
   static encodeDoAction(actions = []) {
-    // Actions byte stream
     const chunks = [];
     for (const act of actions) {
       if (act === 'stop') chunks.push(Buffer.from([0x07])); // ActionStop
@@ -188,7 +234,7 @@ class SwfMovie {
     return SwfMovie.encodeTag(12, data);
   }
 
-  // Define a simple vector rectangle shape (Tag 2: DefineShape)
+  // Define a vector rectangle shape (Tag 2: DefineShape)
   static encodeDefineRectangleShape(shapeId, width, height, fillColor = { r: 255, g: 0, b: 0 }) {
     const bw = new BitWriter();
     bw.writeUI16(shapeId);
@@ -207,13 +253,10 @@ class SwfMovie {
     // LineStyles: 0
     bw.writeUI8(0);
 
-    // ShapeRecords:
-    // StyleChangeRecord: Select FillStyle 1, MoveTo (0,0)
-    // Twip dimensions
+    // StyleChangeRecord (TypeFlag=0, NewStyles=0, LineStyle=0, FillStyle1=1, FillStyle0=0, Move=1)
     const wTwips = Math.round(width * 20);
     const hTwips = Math.round(height * 20);
 
-    // StyleChangeRecord (TypeFlag=0, NewStyles=0, LineStyle=0, FillStyle1=1, FillStyle0=0, Move=1)
     bw.writeBits(0, 1); // TypeFlag (0 = non-edge)
     bw.writeBits(0, 1); // StateNewStyles
     bw.writeBits(0, 1); // StateLineStyle
@@ -225,17 +268,17 @@ class SwfMovie {
     bw.writeSignedBits(0, 5); // MoveDeltaY
     bw.writeBits(1, 1); // FillStyle1 = index 1
 
-    // 4 StraightEdgeRecords for the rectangle
+    // 4 StraightEdgeRecords for rectangle
     const maxD = Math.max(wTwips, hTwips);
     let edgeBits = 1;
     while ((1 << (edgeBits - 1)) <= maxD && edgeBits < 31) edgeBits++;
     edgeBits = Math.max(edgeBits + 1, 5);
 
     // Top edge: dx = wTwips, dy = 0
-    bw.writeBits(1, 1); // TypeFlag = 1 (edge)
-    bw.writeBits(1, 1); // StraightEdge = 1
-    bw.writeBits(edgeBits - 2, 4); // NumBits
-    bw.writeBits(1, 1); // GeneralLine = 1
+    bw.writeBits(1, 1);
+    bw.writeBits(1, 1);
+    bw.writeBits(edgeBits - 2, 4);
+    bw.writeBits(1, 1);
     bw.writeSignedBits(wTwips, edgeBits);
     bw.writeSignedBits(0, edgeBits);
 
@@ -263,7 +306,7 @@ class SwfMovie {
     bw.writeSignedBits(0, edgeBits);
     bw.writeSignedBits(-hTwips, edgeBits);
 
-    // EndShapeRecord (6 bits of 0)
+    // EndShapeRecord
     bw.writeBits(0, 6);
     bw.flushByte();
 
@@ -274,8 +317,12 @@ class SwfMovie {
     const frameCount = Math.max(this.frames.length, 1);
     const rectBuf = SwfMovie.encodeRect(0, this.width, 0, this.height);
 
-    // Tags payload
     const tagChunks = [];
+
+    // Tag 69: FileAttributes must be the first tag in the SWF file
+    if (this.as3 || this.version >= 9) {
+      tagChunks.push(SwfMovie.encodeFileAttributes(false, this.as3, false, false, false));
+    }
 
     // Background Color tag
     tagChunks.push(SwfMovie.encodeSetBackgroundColor(
@@ -284,9 +331,25 @@ class SwfMovie {
       this.backgroundColor.b
     ));
 
+    // Compile ActionScript 3 (AVM2 ABC Bytecode) if AS3 enabled
+    if (this.as3 && As3Engine) {
+      let combinedScript = '';
+      this.frames.forEach((f, idx) => {
+        if (f.actions) {
+          const actStr = Array.isArray(f.actions) ? f.actions.map(a => a + '();').join('\n') : f.actions;
+          combinedScript += `// Frame ${idx + 1}\n${actStr}\n`;
+        }
+      });
+      if (!combinedScript.trim()) {
+        combinedScript = '// MelFlash Main Timeline Script\nstop();\ntrace("MelFlash AS3 Initialized");';
+      }
+      const abcBuf = As3Engine.As3Compiler.compile(combinedScript, { className: this.documentClass });
+      tagChunks.push(SwfMovie.encodeDoABC(0, 'frame_1', abcBuf));
+      tagChunks.push(SwfMovie.encodeSymbolClass([{ tagId: 0, className: this.documentClass }]));
+    }
+
     // Place predefined shapes or elements
     if (this.frames.length === 0) {
-      // Default single frame with a shape
       const shapeId = 1;
       tagChunks.push(SwfMovie.encodeDefineRectangleShape(shapeId, 120, 80, { r: 234, g: 88, b: 12 }));
       tagChunks.push(SwfMovie.encodePlaceObject2(1, shapeId, 100, 100));
@@ -297,14 +360,23 @@ class SwfMovie {
         if (frame.elements) {
           frame.elements.forEach((el, elIdx) => {
             const charId = nextCharId++;
-            const w = el.w || 100;
-            const h = el.h || 80;
-            const col = el.color || { r: 59, g: 130, b: 246 };
+            const w = el.w || el.width || 100;
+            const h = el.h || el.height || 80;
+            let col = { r: 59, g: 130, b: 246 };
+            if (el.color) col = el.color;
+            else if (el.fill && el.fill.startsWith('#')) {
+              col = {
+                r: parseInt(el.fill.slice(1, 3), 16) || 0,
+                g: parseInt(el.fill.slice(3, 5), 16) || 0,
+                b: parseInt(el.fill.slice(5, 7), 16) || 0
+              };
+            }
             tagChunks.push(SwfMovie.encodeDefineRectangleShape(charId, w, h, col));
             tagChunks.push(SwfMovie.encodePlaceObject2(elIdx + 1, charId, el.x || 50, el.y || 50));
           });
         }
-        if (frame.actions && frame.actions.length > 0) {
+        // AS1/2 fallback if AS3 is disabled
+        if (!this.as3 && frame.actions && frame.actions.length > 0) {
           tagChunks.push(SwfMovie.encodeDoAction(frame.actions));
         }
         tagChunks.push(SwfMovie.encodeShowFrame());
@@ -354,6 +426,10 @@ class SwfMovie {
     const frameCount = buffer.readUInt16LE(pos); pos += 2;
 
     const tags = [];
+    let fileAttributes = null;
+    let symbolClasses = [];
+    let abcBlocks = [];
+
     while (pos < buffer.length) {
       const tagCodeAndLength = buffer.readUInt16LE(pos); pos += 2;
       const tagCode = tagCodeAndLength >> 6;
@@ -362,13 +438,83 @@ class SwfMovie {
         tagLength = buffer.readUInt32LE(pos); pos += 4;
       }
       const tagData = buffer.slice(pos, pos + tagLength);
-      tags.push({ code: tagCode, length: tagLength, data: tagData });
+
+      let tagInfo = { code: tagCode, length: tagLength, data: tagData };
+
+      // Tag 69: FileAttributes
+      if (tagCode === 69 && tagData.length >= 4) {
+        fileAttributes = {
+          actionScript3: !!(tagData[0] & 0x08),
+          hasMetadata: !!(tagData[0] & 0x10),
+          useGPU: !!(tagData[0] & 0x20),
+          useDirectBlit: !!(tagData[0] & 0x40),
+          useNetwork: !!(tagData[0] & 0x01)
+        };
+        tagInfo.fileAttributes = fileAttributes;
+      }
+
+      // Tag 76: SymbolClass
+      if (tagCode === 76 && tagData.length >= 2) {
+        const numSymbols = tagData.readUInt16LE(0);
+        let p = 2;
+        const symbols = [];
+        for (let i = 0; i < numSymbols && p < tagData.length; i++) {
+          const symTag = tagData.readUInt16LE(p); p += 2;
+          let end = p;
+          while (end < tagData.length && tagData[end] !== 0) end++;
+          const symName = tagData.slice(p, end).toString('utf8');
+          p = end + 1;
+          symbols.push({ tagId: symTag, className: symName });
+        }
+        symbolClasses.push(...symbols);
+        tagInfo.symbols = symbols;
+      }
+
+      // Tag 82: DoABC
+      if (tagCode === 82 && tagData.length >= 4) {
+        const flags = tagData.readUInt32LE(0);
+        let p = 4;
+        let end = p;
+        while (end < tagData.length && tagData[end] !== 0) end++;
+        const name = tagData.slice(p, end).toString('utf8');
+        p = end + 1;
+        const abcBytes = tagData.slice(p);
+        let disassembly = null;
+        if (As3Engine) {
+          try {
+            disassembly = As3Engine.As3Disassembler.disassemble(abcBytes);
+          } catch (e) {
+            disassembly = { error: e.message };
+          }
+        }
+        const abcBlock = { flags, name, byteLength: abcBytes.length, disassembly };
+        abcBlocks.push(abcBlock);
+        tagInfo.doABC = abcBlock;
+      }
+
+      tags.push(tagInfo);
       pos += tagLength;
       if (tagCode === 0) break; // End tag
     }
 
-    return { signature, version, fileLength, fps, frameCount, tags };
+    return {
+      signature,
+      version,
+      fileLength,
+      fps,
+      frameCount,
+      isActionScript3: !!(fileAttributes && fileAttributes.actionScript3),
+      fileAttributes,
+      symbolClasses,
+      abcBlocks,
+      tags
+    };
   }
 }
 
-module.exports = SwfMovie;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SwfMovie;
+}
+if (typeof window !== 'undefined') {
+  window.SwfMovie = SwfMovie;
+}

@@ -997,6 +997,15 @@ function saveCurrentFrameActions() {
   }
 }
 
+// ActionScript Editor & AVM2 Tooling
+function saveCurrentFrameActions() {
+  const curFrameData = getFrameData(activeLayerIndex, currentFrame);
+  if (curFrameData) {
+    curFrameData.actions = document.getElementById('actionscript-input').value;
+    renderTimeline();
+  }
+}
+
 function insertCodeSnippet(code) {
   const input = document.getElementById('actionscript-input');
   input.value += (input.value ? '\n' : '') + code;
@@ -1005,10 +1014,85 @@ function insertCodeSnippet(code) {
 
 function checkActionScriptSyntax() {
   const code = document.getElementById('actionscript-input').value;
-  alert('ActionScript Syntax Check:\n\n0 errors, 0 warnings. Script compiles successfully.');
+  const statusEl = document.getElementById('as3-syntax-status');
+  if (!code.trim()) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#1e293b';
+      statusEl.style.color = '#94a3b8';
+      statusEl.textContent = 'Empty script: 0 errors, 0 warnings.';
+    }
+    return;
+  }
+  const runtime = new As3Engine.As3Runtime();
+  const res = runtime.checkSyntax(code);
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    if (res.valid) {
+      statusEl.style.background = '#064e3b';
+      statusEl.style.color = '#34d399';
+      statusEl.textContent = '✓ ' + res.message;
+    } else {
+      statusEl.style.background = '#450a0a';
+      statusEl.style.color = '#f87171';
+      statusEl.textContent = '✗ ' + res.message;
+    }
+  }
 }
 
-// Test Movie Window (Ctrl+Enter)
+function viewAvm2Disassembly() {
+  const code = document.getElementById('actionscript-input').value;
+  if (!code.trim()) {
+    logTrace('// No ActionScript 3 code in current frame to disassemble.');
+    switchDockTab('output');
+    return;
+  }
+  try {
+    const abcBuf = As3Engine.As3Compiler.compile(code, { className: 'Main' });
+    const dis = As3Engine.As3Disassembler.disassemble(abcBuf);
+    logTrace(dis.fullText);
+    switchDockTab('output');
+  } catch (err) {
+    logTrace(`[AVM2 Compilation Error] ${err.message}`);
+    switchDockTab('output');
+  }
+}
+
+function logTrace(text) {
+  const dockOut = document.getElementById('dock-trace-output');
+  const testOut = document.getElementById('test-movie-trace-log');
+  const line = (typeof text === 'string') ? text : JSON.stringify(text);
+  if (dockOut) {
+    dockOut.value += (dockOut.value ? '\n' : '') + line;
+    dockOut.scrollTop = dockOut.scrollHeight;
+  }
+  if (testOut) {
+    const row = document.createElement('div');
+    row.textContent = line;
+    testOut.appendChild(row);
+    testOut.scrollTop = testOut.scrollHeight;
+  }
+  console.log('[AS3 trace]', line);
+}
+
+function clearTraceOutput() {
+  const dockOut = document.getElementById('dock-trace-output');
+  const testOut = document.getElementById('test-movie-trace-log');
+  if (dockOut) dockOut.value = '';
+  if (testOut) testOut.innerHTML = '';
+}
+
+function copyTraceOutput() {
+  const dockOut = document.getElementById('dock-trace-output');
+  if (dockOut) {
+    navigator.clipboard.writeText(dockOut.value);
+    alert('Trace output copied to clipboard.');
+  }
+}
+
+// Test Movie Window (Ctrl+Enter) with authentic AVM2 Execution
+let activeAs3Runtime = null;
+
 function testMovie() {
   const modal = document.getElementById('test-movie-modal');
   modal.style.display = 'flex';
@@ -1020,13 +1104,56 @@ function testMovie() {
   canvas.width = stageWidth;
   canvas.height = stageHeight;
 
+  // Initialize AS3 execution sandbox
+  activeAs3Runtime = new As3Engine.As3Runtime({
+    width: stageWidth,
+    height: stageHeight,
+    fps: fps,
+    totalFrames: MAX_FRAMES,
+    onTrace: (msg) => logTrace(msg)
+  });
+
+  setupTestMovieEvents(canvas);
+
+  logTrace(`[AVM2] Initializing Flash Player 19 Test Movie (${stageWidth}x${stageHeight} @ ${fps}fps)`);
+  renderTestMovieFrame();
   startTestMovieInterval();
+}
+
+let testMovieEventsSetup = false;
+function setupTestMovieEvents(canvas) {
+  if (testMovieEventsSetup) return;
+  testMovieEventsSetup = true;
+
+  canvas.addEventListener('click', (e) => {
+    if (!activeAs3Runtime) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const evt = new As3Engine.MouseEvent(As3Engine.MouseEvent.CLICK, true, false, x, y);
+    activeAs3Runtime.root.dispatchEvent(evt);
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (!activeAs3Runtime) return;
+    const rect = canvas.getBoundingClientRect();
+    const evt = new As3Engine.MouseEvent(As3Engine.MouseEvent.MOUSE_DOWN, true, false, e.clientX - rect.left, e.clientY - rect.top);
+    activeAs3Runtime.root.dispatchEvent(evt);
+  });
+
+  canvas.addEventListener('mouseup', (e) => {
+    if (!activeAs3Runtime) return;
+    const rect = canvas.getBoundingClientRect();
+    const evt = new As3Engine.MouseEvent(As3Engine.MouseEvent.MOUSE_UP, true, false, e.clientX - rect.left, e.clientY - rect.top);
+    activeAs3Runtime.root.dispatchEvent(evt);
+  });
 }
 
 function startTestMovieInterval() {
   clearInterval(testMovieInterval);
   const intervalMs = 1000 / fps;
   testMovieInterval = setInterval(() => {
+    if (!isTestMoviePlaying) return;
     testMovieFrame++;
     if (testMovieFrame >= MAX_FRAMES) testMovieFrame = 0;
     renderTestMovieFrame();
@@ -1039,13 +1166,120 @@ function renderTestMovieFrame() {
   ctx.fillStyle = stageBgColor;
   ctx.fillRect(0, 0, stageWidth, stageHeight);
 
+  // 1. Execute Frame ActionScript 3
+  if (activeAs3Runtime) {
+    activeAs3Runtime.root.dispatchEvent(new As3Engine.Event(As3Engine.Event.ENTER_FRAME));
+
+    let frameScript = '';
+    layers.forEach(layer => {
+      if (!layer.visible) return;
+      const fData = layer.frames[testMovieFrame];
+      if (fData && fData.actions && fData.actions.trim()) {
+        frameScript += fData.actions + '\n';
+      }
+    });
+
+    if (frameScript.trim()) {
+      try {
+        activeAs3Runtime.execute(frameScript, activeAs3Runtime.root);
+      } catch (err) {
+        logTrace(`[AS3 Runtime Error at Frame ${testMovieFrame + 1}] ${err.message}`);
+      }
+    }
+
+    // Check playback state set by AS3 (stop() / play())
+    if (activeAs3Runtime.root.isPlaying === false && isTestMoviePlaying) {
+      isTestMoviePlaying = false;
+      document.getElementById('btn-test-play').textContent = '▶ Play';
+      clearInterval(testMovieInterval);
+    }
+  }
+
+  // 2. Render Timeline Graphic Elements
   layers.forEach((layer, lIdx) => {
     if (!layer.visible) return;
     const els = getRenderElements(lIdx, testMovieFrame);
     els.forEach(el => drawElement(ctx, el));
   });
 
+  // 3. Render AS3 Runtime Display List
+  if (activeAs3Runtime && activeAs3Runtime.root.numChildren > 0) {
+    activeAs3Runtime.root.children.forEach(child => {
+      renderAs3DisplayObject(ctx, child);
+    });
+  }
+
   document.getElementById('test-movie-status').textContent = `Frame ${testMovieFrame + 1}/${MAX_FRAMES} | ${fps} fps`;
+}
+
+function renderAs3DisplayObject(ctx, obj) {
+  if (!obj || !obj.visible || obj.alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = (ctx.globalAlpha || 1) * obj.alpha;
+  ctx.translate(obj.x, obj.y);
+  if (obj.rotation) ctx.rotate((obj.rotation * Math.PI) / 180);
+  if (obj.scaleX !== 1 || obj.scaleY !== 1) ctx.scale(obj.scaleX, obj.scaleY);
+
+  if (obj.graphics && obj.graphics.commands) {
+    let curFill = null;
+    let curStroke = null;
+    let curLineWidth = 0;
+    for (const cmd of obj.graphics.commands) {
+      if (cmd.type === 'beginFill') {
+        curFill = '#' + (cmd.color.toString(16).padStart(6, '0'));
+        ctx.beginPath();
+      } else if (cmd.type === 'endFill') {
+        if (curFill) {
+          ctx.fillStyle = curFill;
+          ctx.fill();
+        }
+        if (curStroke) {
+          ctx.strokeStyle = curStroke;
+          ctx.lineWidth = curLineWidth;
+          ctx.stroke();
+        }
+        curFill = null;
+      } else if (cmd.type === 'lineStyle') {
+        curLineWidth = cmd.width || 1;
+        curStroke = '#' + (cmd.color.toString(16).padStart(6, '0'));
+      } else if (cmd.type === 'drawRect') {
+        if (!curFill && !curStroke) ctx.beginPath();
+        ctx.rect(cmd.x, cmd.y, cmd.width, cmd.height);
+      } else if (cmd.type === 'drawCircle') {
+        if (!curFill && !curStroke) ctx.beginPath();
+        ctx.arc(cmd.x, cmd.y, cmd.radius, 0, Math.PI * 2);
+      } else if (cmd.type === 'drawRoundRect') {
+        if (!curFill && !curStroke) ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(cmd.x, cmd.y, cmd.width, cmd.height, cmd.ellipseWidth || 4);
+        else ctx.rect(cmd.x, cmd.y, cmd.width, cmd.height);
+      } else if (cmd.type === 'moveTo') {
+        ctx.moveTo(cmd.x, cmd.y);
+      } else if (cmd.type === 'lineTo') {
+        ctx.lineTo(cmd.x, cmd.y);
+      }
+    }
+    if (curFill) {
+      ctx.fillStyle = curFill;
+      ctx.fill();
+    }
+    if (curStroke) {
+      ctx.strokeStyle = curStroke;
+      ctx.lineWidth = curLineWidth;
+      ctx.stroke();
+    }
+  }
+
+  if (obj.text) {
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#' + ((obj.textColor || 0).toString(16).padStart(6, '0'));
+    ctx.fillText(obj.text, 0, 14);
+  }
+
+  if (obj.children) {
+    obj.children.forEach(child => renderAs3DisplayObject(ctx, child));
+  }
+
+  ctx.restore();
 }
 
 function toggleTestMoviePlay() {
@@ -1053,28 +1287,34 @@ function toggleTestMoviePlay() {
   const btn = document.getElementById('btn-test-play');
   if (isTestMoviePlaying) {
     btn.textContent = '⏸ Pause';
+    if (activeAs3Runtime) activeAs3Runtime.root.play();
     startTestMovieInterval();
   } else {
     btn.textContent = '▶ Play';
+    if (activeAs3Runtime) activeAs3Runtime.root.stop();
     clearInterval(testMovieInterval);
   }
 }
 
 function rewindTestMovie() {
   testMovieFrame = 0;
+  if (activeAs3Runtime) activeAs3Runtime.root.gotoAndStop(1);
   renderTestMovieFrame();
 }
 
 function closeTestMovie() {
   clearInterval(testMovieInterval);
+  activeAs3Runtime = null;
   document.getElementById('test-movie-modal').style.display = 'none';
 }
 
 function switchDockTab(tabName) {
   document.querySelectorAll('.dock-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.dock-body').forEach(b => b.style.display = 'none');
-  event.target.classList.add('active');
-  document.getElementById(`panel-${tabName}`).style.display = 'block';
+  const targetTab = Array.from(document.querySelectorAll('.dock-tab')).find(t => t.textContent.toLowerCase().includes(tabName));
+  if (targetTab) targetTab.classList.add('active');
+  const panel = document.getElementById(`panel-${tabName}`);
+  if (panel) panel.style.display = 'block';
 }
 
 function setupShortcuts() {
@@ -1125,10 +1365,143 @@ function triggerDisassembleSwf() {
   document.getElementById('file-swf-input').click();
 }
 
-function saveFla() {
-  alert('Flash Project saved as DOMDocument .fla / .xfl container.');
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function parseHexColor(hex) {
+  if (!hex || !hex.startsWith('#')) return { r: 255, g: 255, b: 255 };
+  return {
+    r: parseInt(hex.slice(1, 3), 16) || 0,
+    g: parseInt(hex.slice(3, 5), 16) || 0,
+    b: parseInt(hex.slice(5, 7), 16) || 0
+  };
+}
+
+async function saveFla() {
+  const fla = new FlaProject({
+    width: stageWidth,
+    height: stageHeight,
+    frameRate: fps,
+    backgroundColor: stageBgColor,
+    actionScriptVersion: '3',
+    documentClass: 'Main',
+    layers: layers.map(l => ({
+      name: l.name,
+      locked: l.locked,
+      visible: l.visible,
+      frames: l.frames.map((f, idx) => ({
+        index: idx,
+        duration: 1,
+        isKeyframe: f.isKeyframe,
+        actions: f.actions || '',
+        elements: f.elements || []
+      }))
+    })),
+    symbols: library
+  });
+
+  const zipBuf = await fla.exportBuffer();
+  downloadBlob(new Blob([zipBuf], { type: 'application/octet-stream' }), 'project.fla');
+  logTrace(`[FLA] Project saved as project.fla (DOMDocument XFL format with AS3 support)`);
 }
 
 function exportSwf() {
-  alert('SWF v19 movie exported successfully.');
+  const movieFrames = [];
+  for (let f = 0; f < MAX_FRAMES; f++) {
+    const frameElements = [];
+    let frameActions = '';
+    layers.forEach(layer => {
+      if (!layer.visible) return;
+      const curData = layer.frames[f];
+      if (curData && curData.actions) {
+        frameActions += (frameActions ? '\n' : '') + curData.actions;
+      }
+      const els = getRenderElements(layers.indexOf(layer), f);
+      els.forEach(el => frameElements.push(el));
+    });
+    if (frameElements.length > 0 || frameActions) {
+      movieFrames.push({
+        elements: frameElements,
+        actions: frameActions
+      });
+    }
+  }
+
+  const movie = new SwfMovie({
+    version: 19,
+    as3: true,
+    documentClass: 'Main',
+    width: stageWidth,
+    height: stageHeight,
+    fps: fps,
+    backgroundColor: parseHexColor(stageBgColor),
+    frames: movieFrames
+  });
+
+  const swfBuf = movie.toBuffer();
+  downloadBlob(new Blob([swfBuf], { type: 'application/x-shockwave-flash' }), 'movie.swf');
+  logTrace(`[SWF] Exported movie.swf (${swfBuf.length} bytes, SWF v19, AS3 / AVM2 enabled)`);
+}
+
+async function handleOpenFla(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const project = await FlaProject.fromBuffer(arrayBuffer);
+    stageWidth = project.width;
+    stageHeight = project.height;
+    fps = project.frameRate;
+    stageBgColor = project.backgroundColor;
+    layers = project.layers;
+    document.getElementById('stage-w-input').value = stageWidth;
+    document.getElementById('stage-h-input').value = stageHeight;
+    document.getElementById('stage-fps-input').value = fps;
+    document.getElementById('stage-bg-input').value = stageBgColor;
+    currentFrame = 0;
+    activeLayerIndex = 0;
+    renderTimeline();
+    renderStage();
+    updatePlayhead();
+    updateStatus();
+    logTrace(`[FLA] Loaded ${file.name} successfully (${layers.length} layers, AS${project.actionScriptVersion})`);
+  } catch (err) {
+    alert('Failed to load FLA: ' + err.message);
+  }
+  event.target.value = '';
+}
+
+async function handleDisassembleSwf(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const swfData = (typeof Buffer !== 'undefined') ? Buffer.from(arrayBuffer) : new Uint8Array(arrayBuffer);
+    const parsed = SwfMovie.parse(swfData);
+    let output = `// SWF Disassembly: ${file.name}\n// Version: ${parsed.version} (AS3: ${parsed.isActionScript3})\n// Dimensions: ${parsed.frameCount} frames @ ${parsed.fps} fps\n// Total Tags: ${parsed.tags.length}\n\n`;
+    if (parsed.abcBlocks && parsed.abcBlocks.length > 0) {
+      output += `=== ActionScript 3.0 (AVM2 Bytecode Blocks: ${parsed.abcBlocks.length}) ===\n\n`;
+      parsed.abcBlocks.forEach((b, i) => {
+        output += `[Block ${i + 1}: ${b.name} (${b.byteLength} bytes)]\n`;
+        if (b.disassembly && b.disassembly.fullText) {
+          output += b.disassembly.fullText + '\n';
+        }
+      });
+    } else {
+      output += `// No AVM2 DoABC tags found in this SWF.\n`;
+    }
+    logTrace(output);
+    switchDockTab('output');
+  } catch (err) {
+    alert('Failed to disassemble SWF: ' + err.message);
+  }
+  event.target.value = '';
 }

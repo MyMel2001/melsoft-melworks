@@ -1,6 +1,6 @@
 // MelFlash Project (FLA / XFL) Encoder & Decoder
 // Implements DOMDocument XFL standard & archive structure from cleanroom specification
-const JSZip = require('jszip');
+const JSZipLib = (typeof JSZip !== 'undefined') ? JSZip : ((typeof require !== 'undefined') ? require('jszip') : (typeof window !== 'undefined' ? window.JSZip : null));
 
 class FlaProject {
   constructor(options = {}) {
@@ -9,6 +9,8 @@ class FlaProject {
     this.height = options.height || 600;
     this.frameRate = options.frameRate || 24;
     this.backgroundColor = options.backgroundColor || '#FFFFFF';
+    this.actionScriptVersion = options.actionScriptVersion || '3';
+    this.documentClass = options.documentClass || 'Main';
     this.layers = options.layers || [
       {
         name: 'Layer 1',
@@ -41,7 +43,7 @@ class FlaProject {
   toXflXml() {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     xml += `<DOMDocument xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://ns.adobe.com/xfl/2008/" `;
-    xml += `width="${this.width}" height="${this.height}" frameRate="${this.frameRate}" backgroundColor="${this.backgroundColor}">\n`;
+    xml += `width="${this.width}" height="${this.height}" frameRate="${this.frameRate}" backgroundColor="${this.backgroundColor}" actionScriptVersion="${this.actionScriptVersion}" currentLibraryItem="${this.documentClass}">\n`;
 
     // Symbols Library
     xml += `  <symbols>\n`;
@@ -84,7 +86,7 @@ class FlaProject {
   }
 
   async exportBuffer() {
-    const zip = new JSZip();
+    const zip = new JSZipLib();
     zip.file('DOMDocument.xml', this.toXflXml());
 
     // Write symbol files in LIBRARY/
@@ -107,18 +109,22 @@ class FlaProject {
   }
 
   static async fromBuffer(buffer) {
-    const zip = await JSZip.loadAsync(buffer);
+    const zip = await JSZipLib.loadAsync(buffer);
     const docXml = await zip.file('DOMDocument.xml').async('text');
 
     const widthMatch = docXml.match(/width="([0-9]+)"/);
     const heightMatch = docXml.match(/height="([0-9]+)"/);
     const fpsMatch = docXml.match(/frameRate="([0-9\.]+)"/);
     const bgMatch = docXml.match(/backgroundColor="([^"]+)"/);
+    const asMatch = docXml.match(/actionScriptVersion="([^"]+)"/);
+    const docClassMatch = docXml.match(/currentLibraryItem="([^"]+)"/);
 
     const width = widthMatch ? parseInt(widthMatch[1], 10) : 800;
     const height = heightMatch ? parseInt(heightMatch[1], 10) : 600;
     const frameRate = fpsMatch ? parseFloat(fpsMatch[1]) : 24;
     const backgroundColor = bgMatch ? bgMatch[1] : '#FFFFFF';
+    const actionScriptVersion = asMatch ? asMatch[1] : '3';
+    const documentClass = docClassMatch ? docClassMatch[1] : 'Main';
 
     const layers = [];
     const layerRegex = /<DOMLayer\s+name="([^"]+)"[^>]*>([\s\S]*?)<\/DOMLayer>/g;
@@ -164,8 +170,13 @@ class FlaProject {
       layers.push({ name: 'Layer 1', locked: false, visible: true, frames: [{ index: 0, duration: 1, isKeyframe: true, elements: [] }] });
     }
 
-    return new FlaProject({ width, height, frameRate, backgroundColor, layers });
+    return new FlaProject({ width, height, frameRate, backgroundColor, actionScriptVersion, documentClass, layers });
   }
 }
 
-module.exports = FlaProject;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = FlaProject;
+}
+if (typeof window !== 'undefined') {
+  window.FlaProject = FlaProject;
+}
