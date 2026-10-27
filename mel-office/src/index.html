@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>MelOffice 365 Professional</title>
+  <title>MelOffice 365 Professional - Office Suite</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,93 +11,165 @@
   <header class="titlebar" id="titlebar">
     <div class="brand">
       <div class="brand-icon" id="brand-icon">W</div>
-      <span id="brand-text">MelWord - MelOffice 365</span>
+      <span id="brand-text">MelWord - Document1</span>
     </div>
 
     <div class="app-switcher">
-      <button class="app-btn active" id="btn-switch-word" onclick="switchApp('word')">MelWord (DOCX)</button>
-      <button class="app-btn" id="btn-switch-excel" onclick="switchApp('excel')">MelExcel (XLSX)</button>
-      <button class="app-btn" id="btn-switch-ppt" onclick="switchApp('ppt')">MelPowerPoint (PPTX)</button>
+      <button class="app-btn active" id="btn-switch-word" onclick="switchApp('word')">Word</button>
+      <button class="app-btn" id="btn-switch-excel" onclick="switchApp('excel')">Excel</button>
+      <button class="app-btn" id="btn-switch-ppt" onclick="switchApp('ppt')">PowerPoint</button>
     </div>
 
-    <div style="font-size: 11px; opacity: 0.85;">ECMA-376 Compliant</div>
+    <div style="font-size: 11px; opacity: 0.85; display:flex; align-items:center; gap:10px;">
+      <span id="save-status-indicator">AutoSaved</span>
+      <span style="opacity:0.6;">ECMA-376 OpenXML</span>
+    </div>
   </header>
 
-  <!-- Ribbon Menu -->
+  <!-- Ribbon Menu Bar -->
   <nav class="ribbon">
     <div class="ribbon-tabs">
       <div class="ribbon-tab active" onclick="switchRibbonTab('home')">Home</div>
       <div class="ribbon-tab" onclick="switchRibbonTab('insert')">Insert</div>
-      <div class="ribbon-tab" id="tab-app-specific" onclick="switchRibbonTab('specific')">Layout & Style</div>
-      <div class="ribbon-tab" onclick="switchRibbonTab('file')">File & Export</div>
+      <div class="ribbon-tab" id="tab-layout" onclick="switchRibbonTab('layout')">Layout</div>
+      <div class="ribbon-tab" id="tab-formulas" onclick="switchRibbonTab('formulas')" style="display: none;">Formulas</div>
+      <div class="ribbon-tab" id="tab-review" onclick="switchRibbonTab('review')">Review</div>
+      <div class="ribbon-tab" id="tab-view" onclick="switchRibbonTab('view')">View</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('file')">File</div>
     </div>
 
-    <!-- Home Tab Content -->
+    <!-- HOME TAB -->
     <div class="ribbon-content" id="ribbon-home">
       <!-- File Operations -->
       <div class="ribbon-group">
         <button class="btn-tool" onclick="newDocument()">📄 New</button>
         <button class="btn-tool" onclick="triggerOpen()">📂 Open</button>
-        <button class="btn-tool" onclick="saveDocument()">💾 Save</button>
+        <button class="btn-tool" onclick="saveDocument()" style="color: #0284c7; font-weight: bold;">💾 Save</button>
       </div>
 
-      <!-- Text Formatting (Word / PPT) -->
+      <!-- Word / PPT Font Controls -->
       <div class="ribbon-group" id="group-text-formatting">
-        <button class="btn-tool" onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
-        <button class="btn-tool" onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
-        <button class="btn-tool" onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
-        <button class="btn-tool" onclick="formatDoc('strikeThrough')" title="Strike"><s>S</s></button>
-        <select class="tool-select" onchange="formatDoc('fontName', this.value)">
-          <option value="Arial">Arial</option>
-          <option value="Calibri" selected>Calibri</option>
-          <option value="Times New Roman">Times New Roman</option>
-          <option value="Courier New">Courier New</option>
-          <option value="Georgia">Georgia</option>
-        </select>
-        <select class="tool-select" onchange="formatDoc('fontSize', this.value)">
-          <option value="1">8 pt</option>
-          <option value="2">10 pt</option>
-          <option value="3" selected>12 pt</option>
-          <option value="4">14 pt</option>
-          <option value="5">18 pt</option>
-          <option value="6">24 pt</option>
-          <option value="7">36 pt</option>
-        </select>
-        <input type="color" class="tool-input" title="Text Color" onchange="formatDoc('foreColor', this.value)" value="#1e293b">
+        <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 2px;">
+          <select class="tool-select" id="font-family-select" onchange="formatDoc('fontName', this.value)" style="width: 120px;">
+            <option value="Calibri" selected>Calibri</option>
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Segoe UI">Segoe UI</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Courier New">Courier New</option>
+          </select>
+          <select class="tool-select" id="font-size-select" onchange="formatDoc('fontSize', this.value)" style="width: 55px;">
+            <option value="1">8 pt</option>
+            <option value="2">10 pt</option>
+            <option value="3" selected>12 pt</option>
+            <option value="4">14 pt</option>
+            <option value="5">18 pt</option>
+            <option value="6">24 pt</option>
+            <option value="7">36 pt</option>
+          </select>
+          <button class="btn-tool-mini" onclick="growFont()" title="Increase Font Size">A▲</button>
+          <button class="btn-tool-mini" onclick="shrinkFont()" title="Decrease Font Size">A▼</button>
+        </div>
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <button class="btn-tool-mini" onclick="formatDoc('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button class="btn-tool-mini" onclick="formatDoc('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button class="btn-tool-mini" onclick="formatDoc('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+          <button class="btn-tool-mini" onclick="formatDoc('strikeThrough')" title="Strikethrough"><s>S</s></button>
+          <button class="btn-tool-mini" onclick="formatDoc('subscript')" title="Subscript">x₂</button>
+          <button class="btn-tool-mini" onclick="formatDoc('superscript')" title="Superscript">x²</button>
+          <input type="color" class="tool-color" title="Font Color" onchange="formatDoc('foreColor', this.value)" value="#1e293b">
+          <input type="color" class="tool-color" title="Text Highlight" onchange="formatDoc('hiliteColor', this.value)" value="#ffff00">
+          <button class="btn-tool-mini" onclick="formatDoc('removeFormat')" title="Clear Formatting">🧹</button>
+        </div>
       </div>
 
-      <!-- Alignment & Lists -->
+      <!-- Alignment & Paragraph (Word) -->
       <div class="ribbon-group" id="group-alignment">
-        <button class="btn-tool" onclick="formatDoc('justifyLeft')" title="Align Left">⇤</button>
-        <button class="btn-tool" onclick="formatDoc('justifyCenter')" title="Align Center">≡</button>
-        <button class="btn-tool" onclick="formatDoc('justifyRight')" title="Align Right">⇥</button>
-        <button class="btn-tool" onclick="formatDoc('insertUnorderedList')" title="Bullet List">• List</button>
-        <button class="btn-tool" onclick="formatDoc('insertOrderedList')" title="Numbered List">1. List</button>
+        <div style="display: flex; gap: 3px; margin-bottom: 2px;">
+          <button class="btn-tool-mini" onclick="formatDoc('justifyLeft')" title="Align Left">⇤</button>
+          <button class="btn-tool-mini" onclick="formatDoc('justifyCenter')" title="Align Center">≡</button>
+          <button class="btn-tool-mini" onclick="formatDoc('justifyRight')" title="Align Right">⇥</button>
+          <button class="btn-tool-mini" onclick="formatDoc('justifyFull')" title="Justify">≣</button>
+        </div>
+        <div style="display: flex; gap: 3px;">
+          <button class="btn-tool-mini" onclick="formatDoc('insertUnorderedList')" title="Bullet List">•≡</button>
+          <button class="btn-tool-mini" onclick="formatDoc('insertOrderedList')" title="Numbered List">1≡</button>
+          <button class="btn-tool-mini" onclick="formatDoc('outdent')" title="Decrease Indent">«</button>
+          <button class="btn-tool-mini" onclick="formatDoc('indent')" title="Increase Indent">»</button>
+        </div>
       </div>
 
-      <!-- Excel Quick Ops -->
+      <!-- Word Styles Gallery -->
+      <div class="ribbon-group" id="group-word-styles">
+        <div class="styles-gallery">
+          <div class="style-box active" onclick="applyHeadingStyle('p')">
+            <span style="font-size:12px;">Normal</span>
+          </div>
+          <div class="style-box" onclick="applyHeadingStyle('h1')">
+            <span style="font-size:14px; font-weight:bold; color:#1a73e8;">Heading 1</span>
+          </div>
+          <div class="style-box" onclick="applyHeadingStyle('h2')">
+            <span style="font-size:13px; font-weight:bold; color:#2b579a;">Heading 2</span>
+          </div>
+          <div class="style-box" onclick="applyHeadingStyle('h3')">
+            <span style="font-size:12px; font-weight:bold; color:#475569;">Heading 3</span>
+          </div>
+          <div class="style-box" onclick="applyHeadingStyle('blockquote')">
+            <span style="font-size:11px; font-style:italic;">Quote</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Excel Quick Number & Cell Ops -->
       <div class="ribbon-group" id="group-excel-quick" style="display: none;">
-        <button class="btn-tool" onclick="applyExcelFormat('currency')">$ Currency</button>
-        <button class="btn-tool" onclick="applyExcelFormat('percent')">% Percent</button>
-        <button class="btn-tool" onclick="insertExcelSum()">∑ AutoSum</button>
+        <div style="display: flex; gap: 4px; margin-bottom: 2px;">
+          <button class="btn-tool-mini" onclick="applyExcelFormat('currency')" title="Currency">$</button>
+          <button class="btn-tool-mini" onclick="applyExcelFormat('percent')" title="Percent">%</button>
+          <button class="btn-tool-mini" onclick="applyExcelFormat('comma')" title="Comma Style">,</button>
+          <button class="btn-tool-mini" onclick="applyExcelFormat('decimals-inc')" title="Increase Decimal">.00→</button>
+          <button class="btn-tool-mini" onclick="applyExcelFormat('decimals-dec')" title="Decrease Decimal">←.0</button>
+        </div>
+        <div style="display: flex; gap: 4px;">
+          <button class="btn-tool-mini" onclick="setCellBorder('all')" title="All Borders">⊞</button>
+          <button class="btn-tool-mini" onclick="setCellBorder('outside')" title="Thick Outside Border">▢</button>
+          <button class="btn-tool-mini" onclick="setCellBorder('none')" title="No Border">⨂</button>
+          <input type="color" class="tool-color" id="cell-fill-color" title="Cell Fill Color" onchange="setCellFill(this.value)" value="#ffffff">
+          <button class="btn-tool-mini" onclick="mergeSelectedCells()" title="Merge & Center">⇎ Merge</button>
+        </div>
       </div>
 
-      <!-- PPT Quick Ops -->
+      <!-- PowerPoint Quick Slides -->
       <div class="ribbon-group" id="group-ppt-quick" style="display: none;">
-        <button class="btn-tool" onclick="addNewSlide()">➕ Add Slide</button>
-        <button class="btn-tool" onclick="deleteCurrentSlide()">🗑 Delete Slide</button>
-        <button class="btn-tool" onclick="startSlideShow()" style="background:#fee2e2; border-color:#fca5a5; color:#b91c1c;">▶ Slide Show (F5)</button>
+        <button class="btn-tool" onclick="promptAddSlide()" title="New Slide with Layout">➕ New Slide</button>
+        <button class="btn-tool" onclick="duplicateCurrentSlide()" title="Duplicate Slide">⧉ Duplicate</button>
+        <button class="btn-tool" onclick="deleteCurrentSlide()" title="Delete Slide">🗑 Delete</button>
+        <button class="btn-tool" onclick="startSlideShow()" style="background:#fee2e2; border-color:#fca5a5; color:#b91c1c; font-weight:bold;">▶ Slide Show (F5)</button>
+      </div>
+
+      <!-- Find & Replace -->
+      <div class="ribbon-group" style="border-right: none;">
+        <button class="btn-tool" onclick="toggleFindReplace()" title="Find and Replace (Ctrl+F)">🔍 Find</button>
       </div>
     </div>
 
-    <!-- Insert Tab Content -->
+    <!-- INSERT TAB -->
     <div class="ribbon-content" id="ribbon-insert" style="display: none;">
+      <!-- Table Controls -->
       <div class="ribbon-group">
-        <button class="btn-tool" onclick="insertTable()">📊 Insert Table (3x3)</button>
-        <button class="btn-tool" onclick="insertHeading(1)">H1 Heading</button>
-        <button class="btn-tool" onclick="insertHeading(2)">H2 Subheading</button>
-        <button class="btn-tool" onclick="insertHorizontalRule()">― Line Divider</button>
+        <button class="btn-tool" onclick="insertTableDialog()">📊 Table</button>
+        <button class="btn-tool" onclick="insertPageBreak()">📄 Page Break</button>
       </div>
+      <!-- Shapes & Images -->
+      <div class="ribbon-group">
+        <span style="font-size: 11px; color: #666;">Shapes:</span>
+        <button class="btn-tool-mini" onclick="insertShape('rectangle')" title="Rectangle">▭</button>
+        <button class="btn-tool-mini" onclick="insertShape('circle')" title="Circle">◯</button>
+        <button class="btn-tool-mini" onclick="insertShape('arrow')" title="Arrow">➔</button>
+        <button class="btn-tool-mini" onclick="insertShape('star')" title="Star">★</button>
+        <button class="btn-tool" onclick="insertTextBox()">🗛 Text Box</button>
+        <button class="btn-tool" onclick="insertImagePrompt()">🖼 Picture</button>
+      </div>
+      <!-- WordprocessingML Art Borders -->
       <div class="ribbon-group" id="group-word-art-borders">
         <span style="font-size: 11px; font-weight:600;">Art Border:</span>
         <select class="tool-select" id="select-art-border" onchange="applyArtBorder(this.value)">
@@ -109,102 +181,191 @@
       </div>
     </div>
 
-    <!-- Layout & Style Tab Content -->
-    <div class="ribbon-content" id="ribbon-specific" style="display: none;">
+    <!-- LAYOUT TAB -->
+    <div class="ribbon-content" id="ribbon-layout" style="display: none;">
       <div class="ribbon-group">
-        <span style="font-size: 11px; font-weight:600;">Page / Theme:</span>
-        <select class="tool-select" id="theme-select" onchange="changeTheme(this.value)">
-          <option value="modern">Modern Office</option>
-          <option value="classic">Classic Executive</option>
-          <option value="dark">Dark Slate</option>
+        <span style="font-size: 11px; color: #666;">Margins:</span>
+        <select class="tool-select" id="page-margins-select" onchange="changePageMargins(this.value)">
+          <option value="normal">Normal (1 in / 2.54 cm)</option>
+          <option value="narrow">Narrow (0.5 in / 1.27 cm)</option>
+          <option value="wide">Wide (1.5 in / 3.81 cm)</option>
         </select>
       </div>
-      <div class="ribbon-group" id="group-ppt-layout" style="display:none;">
-        <span style="font-size: 11px; font-weight:600;">Slide BG:</span>
-        <input type="color" class="tool-input" id="slide-bg-picker" onchange="changeSlideBackground(this.value)" value="#ffffff">
+      <div class="ribbon-group">
+        <span style="font-size: 11px; color: #666;">Orientation:</span>
+        <select class="tool-select" id="page-orientation-select" onchange="changePageOrientation(this.value)">
+          <option value="portrait" selected>Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+      <div class="ribbon-group" id="group-ppt-bg" style="display:none;">
+        <span style="font-size: 11px; font-weight:600;">Slide Background:</span>
+        <input type="color" class="tool-color" id="slide-bg-picker" onchange="changeSlideBackground(this.value)" value="#ffffff">
       </div>
     </div>
 
-    <!-- File & Export Tab Content -->
+    <!-- FORMULAS TAB (Excel) -->
+    <div class="ribbon-content" id="ribbon-formulas" style="display: none;">
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="insertFormulaTemplate('SUM')">∑ AutoSum</button>
+        <button class="btn-tool" onclick="insertFormulaTemplate('AVERAGE')">x̄ Average</button>
+        <button class="btn-tool" onclick="insertFormulaTemplate('COUNT')"># Count</button>
+        <button class="btn-tool" onclick="insertFormulaTemplate('MAX')">▲ Max</button>
+        <button class="btn-tool" onclick="insertFormulaTemplate('MIN')">▼ Min</button>
+        <button class="btn-tool" onclick="insertFormulaTemplate('IF')">? IF Logical</button>
+      </div>
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="recalcExcelGrid()">🔄 Calculate Now</button>
+      </div>
+    </div>
+
+    <!-- REVIEW TAB -->
+    <div class="ribbon-content" id="ribbon-review" style="display: none;">
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="showWordCountModal()">📊 Word Count</button>
+        <button class="btn-tool" onclick="toggleSpellCheck()">✓ Check Spelling</button>
+      </div>
+    </div>
+
+    <!-- VIEW TAB -->
+    <div class="ribbon-content" id="ribbon-view" style="display: none;">
+      <div class="ribbon-group">
+        <button class="btn-tool active" id="btn-view-ruler" onclick="toggleRuler()">📏 Ruler</button>
+        <button class="btn-tool active" id="btn-view-gridlines" onclick="toggleGridlines()">⊞ Gridlines</button>
+      </div>
+      <div class="ribbon-group">
+        <button class="btn-tool" onclick="setDocZoom(100)">100%</button>
+        <button class="btn-tool" onclick="setDocZoom(125)">125%</button>
+        <button class="btn-tool" onclick="setDocZoom(75)">75%</button>
+      </div>
+    </div>
+
+    <!-- FILE TAB -->
     <div class="ribbon-content" id="ribbon-file" style="display: none;">
       <div class="ribbon-group">
         <button class="btn-tool" onclick="exportNativeFile()">⬇ Export (.docx / .xlsx / .pptx)</button>
-        <button class="btn-tool" onclick="exportJSON()">⬇ Export Project JSON</button>
         <button class="btn-tool" onclick="window.print()">🖨 Print / PDF</button>
       </div>
     </div>
   </nav>
 
+  <!-- Find & Replace Floating Panel -->
+  <div class="find-replace-bar" id="find-replace-bar" style="display: none;">
+    <input type="text" id="find-input" placeholder="Find text..." style="width: 140px; padding: 2px 6px; font-size: 11px;">
+    <input type="text" id="replace-input" placeholder="Replace with..." style="width: 140px; padding: 2px 6px; font-size: 11px;">
+    <button class="btn-tool-mini" onclick="performFindNext()">Next</button>
+    <button class="btn-tool-mini" onclick="performReplace()">Replace</button>
+    <button class="btn-tool-mini" onclick="performReplaceAll()">Replace All</button>
+    <button class="btn-tool-mini" onclick="toggleFindReplace()" style="color: #ef4444;">✕</button>
+  </div>
+
   <!-- Workspace Container -->
   <main class="workspace" id="workspace">
 
     <!-- MelWord Workspace -->
-    <div class="doc-canvas" id="doc-canvas" contenteditable="true" spellcheck="false">
-      <h1 style="color: #1a73e8; text-align: center;">MelOffice Document</h1>
-      <p style="text-align: center; color: #64748b; font-size: 14px;">ECMA-376 Office Open XML Standard Compliant</p>
-      <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 16px 0;">
-      <p>Welcome to <b>MelWord</b>, part of the complete <b>MelOffice 365</b> suite.</p>
-      <p>This editor natively generates and interprets strict <b>WordprocessingML (wml.xsd)</b> packages adhering to the ISO/IEC 29500 and ECMA-376 standard.</p>
-      <br>
-      <h2>Standard Art Borders & Styling</h2>
-      <p>Use the <i>Insert &gt; Art Border</i> selector above to apply authentic OpenXML borders such as <b>Woodwork</b> and <b>Zany Triangles</b>.</p>
-      <br>
-      <table border="1" style="width: 100%; border-collapse: collapse; border-color: #cbd5e1; text-align: left;">
-        <thead>
-          <tr style="background: #f1f5f9;">
-            <th style="padding: 8px;">Feature</th>
-            <th style="padding: 8px;">Standard</th>
-            <th style="padding: 8px;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">Rich Text Formatting</td>
-            <td style="padding: 8px;">w:rPr / w:pPr</td>
-            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">Art Borders</td>
-            <td style="padding: 8px;">w:pBdr</td>
-            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">OPC ZIP Packaging</td>
-            <td style="padding: 8px;">ECMA-376-2</td>
-            <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- MelExcel Workspace -->
-    <div class="excel-container" id="excel-container">
-      <div class="excel-fx-bar">
-        <input type="text" class="cell-coord" id="selected-cell-id" value="A1" readonly>
-        <span class="fx-label">fx</span>
-        <input type="text" class="fx-input" id="fx-bar" placeholder="Enter value or formula e.g. =SUM(B2:B5) or =B2*C2" onkeydown="handleFxKey(event)">
+    <div class="word-workspace-wrapper" id="word-workspace">
+      <!-- Horizontal Ruler Bar -->
+      <div class="word-ruler" id="word-ruler">
+        <div class="ruler-ticks" id="ruler-ticks"></div>
       </div>
-      <div class="excel-grid-scroll">
-        <table class="excel-grid" id="excel-table">
-          <!-- Dynamically generated rows and columns -->
+      <div class="doc-canvas" id="doc-canvas" contenteditable="true" spellcheck="false" oninput="handleWordInput()">
+        <h1 style="color: #1a73e8; text-align: center;">MelOffice Document</h1>
+        <p style="text-align: center; color: #64748b; font-size: 14px;">ECMA-376 Office Open XML Standard Compliant</p>
+        <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 16px 0;">
+        <p>Welcome to <b>MelWord</b>, part of the complete <b>MelOffice 365</b> suite.</p>
+        <p>This editor natively generates and interprets strict <b>WordprocessingML (wml.xsd)</b> packages adhering to the ISO/IEC 29500 and ECMA-376 standard.</p>
+        <br>
+        <h2>Standard Art Borders & Styling</h2>
+        <p>Use the <i>Insert &gt; Art Border</i> selector above to apply authentic OpenXML borders such as <b>Woodwork</b> and <b>Zany Triangles</b>.</p>
+        <br>
+        <table border="1" style="width: 100%; border-collapse: collapse; border-color: #cbd5e1; text-align: left;">
+          <thead>
+            <tr style="background: #f1f5f9;">
+              <th style="padding: 8px;">Feature</th>
+              <th style="padding: 8px;">Standard</th>
+              <th style="padding: 8px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 8px;">Rich Text Formatting</td>
+              <td style="padding: 8px;">w:rPr / w:pPr</td>
+              <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px;">Art Borders</td>
+              <td style="padding: 8px;">w:pBdr</td>
+              <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px;">OPC ZIP Packaging</td>
+              <td style="padding: 8px;">ECMA-376-2</td>
+              <td style="padding: 8px; color: #16a34a; font-weight: bold;">Fully Supported</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
 
+    <!-- MelExcel Workspace -->
+    <div class="excel-container" id="excel-container" style="display: none;">
+      <!-- Formula Bar -->
+      <div class="excel-fx-bar">
+        <input type="text" class="cell-coord" id="selected-cell-id" value="A1" readonly>
+        <button class="fx-action-btn" id="btn-fx-cancel" onclick="cancelFxEdit()" title="Cancel">✕</button>
+        <button class="fx-action-btn" id="btn-fx-accept" onclick="acceptFxEdit()" title="Enter">✓</button>
+        <span class="fx-label" onclick="promptFunctionDialog()" title="Insert Function">fx</span>
+        <input type="text" class="fx-input" id="fx-bar" placeholder="Enter value or formula e.g. =SUM(B2:B5) or =B2*C2" onkeydown="handleFxKey(event)" oninput="handleFxInput(event)">
+      </div>
+
+      <!-- Spreadsheet Grid Area -->
+      <div class="excel-grid-scroll" id="excel-grid-scroll">
+        <table class="excel-grid" id="excel-table">
+          <!-- Dynamically generated rows and columns -->
+        </table>
+      </div>
+
+      <!-- Sheet Tabs Bar -->
+      <div class="excel-sheets-bar" id="excel-sheets-bar">
+        <div class="sheet-tabs-list" id="sheet-tabs-list">
+          <div class="sheet-tab active" onclick="switchSheet('Sheet1')">Sheet1</div>
+        </div>
+        <button class="btn-add-sheet" onclick="addNewSheet()" title="Add Sheet">+</button>
+      </div>
+    </div>
+
     <!-- MelPowerPoint Workspace -->
-    <div class="ppt-container" id="ppt-container">
+    <div class="ppt-container" id="ppt-container" style="display: none;">
+      <!-- Slide Deck Thumbnails -->
       <aside class="ppt-deck" id="ppt-deck">
-        <!-- Slide thumbnails rendered dynamically -->
+        <!-- Rendered dynamically -->
       </aside>
+
+      <!-- Center Slide Editing Canvas -->
       <section class="ppt-main">
         <div class="slide-stage" id="slide-stage">
-          <div class="slide-title" id="slide-title" contenteditable="true" spellcheck="false">MelOffice Presentation</div>
-          <div class="slide-subtitle" id="slide-subtitle" contenteditable="true" spellcheck="false">ECMA-376 PresentationML Slide Deck</div>
-          <div class="slide-body" id="slide-body" contenteditable="true" spellcheck="false">
-            <p>• Full native support for PresentationML (pml.xsd)</p>
-            <p>• Dynamic multi-slide presentation manager</p>
-            <p>• Export directly to Microsoft PowerPoint .pptx files</p>
+          <div class="slide-element ppt-title-box" id="slide-title-box">
+            <div class="slide-title" id="slide-title" contenteditable="true" spellcheck="false">MelOffice Presentation</div>
           </div>
+          <div class="slide-element ppt-subtitle-box" id="slide-subtitle-box">
+            <div class="slide-subtitle" id="slide-subtitle" contenteditable="true" spellcheck="false">ECMA-376 PresentationML Slide Deck</div>
+          </div>
+          <div class="slide-element ppt-body-box" id="slide-body-box">
+            <div class="slide-body" id="slide-body" contenteditable="true" spellcheck="false">
+              <p>• Full native support for PresentationML (pml.xsd)</p>
+              <p>• Dynamic multi-slide presentation manager</p>
+              <p>• Export directly to Microsoft PowerPoint .pptx files</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide Notes Pane -->
+        <div class="ppt-notes-pane" id="ppt-notes-pane">
+          <div class="notes-header">
+            <span>Notes</span>
+            <button class="btn-tool-mini" onclick="toggleNotesPane()">▲</button>
+          </div>
+          <textarea class="notes-textarea" id="slide-notes" placeholder="Click to add slide speaker notes..." oninput="saveCurrentSlide()"></textarea>
         </div>
       </section>
     </div>
@@ -218,11 +379,13 @@
       <h3 id="show-subtitle" style="font-size: 28px; color: #475569; margin-bottom: 30px;"></h3>
       <div id="show-body" style="font-size: 22px; line-height: 1.6;"></div>
     </div>
+    <div class="slideshow-footer" id="slideshow-footer">Slide 1 of 1 (Click or space to advance, Esc to exit)</div>
   </div>
 
   <!-- Status Bar -->
   <footer class="statusbar">
     <span id="status-left">MelOffice 365 | Ready</span>
+    <span id="status-mid" style="margin: 0 auto; font-size: 11px; color: #64748b;"></span>
     <span id="status-right">100% ECMA-376 Compliant</span>
   </footer>
 
