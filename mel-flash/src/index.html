@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MelFlash Professional - Flash Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Menu Bar -->
+  <header class="menubar">
+    <div class="brand-flash">
+      <span class="brand-flash-badge">FL</span>
+      <span>MelFlash Pro</span>
+    </div>
+    <div class="menu-item" onclick="newProject()">New</div>
+    <div class="menu-item" onclick="triggerOpenFla()">Open FLA...</div>
+    <div class="menu-item" onclick="saveFla()">Save FLA</div>
+    <div class="menu-item" onclick="exportSwf()" style="color: #fb923c; font-weight: bold;">Export SWF (v19)</div>
+    <div class="menu-item" onclick="triggerDisassembleSwf()">Disassemble SWF...</div>
+    <div class="menu-item" onclick="insertKeyframe()">Insert Keyframe (F6)</div>
+    <div class="menu-item" onclick="convertSelectionToSymbol()">Convert to Symbol (F8)</div>
+    <div class="menu-item" onclick="togglePlay()" style="margin-left: auto;">▶ Test / Play (Enter)</div>
+  </header>
+
+  <!-- Studio Layout -->
+  <div class="studio-body">
+
+    <!-- Timeline Panel -->
+    <div class="timeline-panel">
+      <div class="timeline-toolbar">
+        <div class="playback-controls">
+          <button class="btn-ctrl" onclick="rewindTimeline()" title="Rewind">|◀</button>
+          <button class="btn-ctrl" onclick="stepFrame(-1)" title="Step Back">◀</button>
+          <button class="btn-ctrl" id="btn-play" onclick="togglePlay()" title="Play">▶ Play</button>
+          <button class="btn-ctrl" onclick="stepFrame(1)" title="Step Forward">▶</button>
+          <button class="btn-ctrl" id="btn-loop" onclick="toggleLoop()" title="Loop">🔁 Loop</button>
+          <button class="btn-ctrl" id="btn-onion" onclick="toggleOnionSkin()" title="Onion Skin">🧅 Onion Skin</button>
+        </div>
+
+        <div style="display: flex; gap: 14px; font-size: 11px; align-items: center;">
+          <span>Current Frame: <strong id="lbl-current-frame" style="color: #f97316;">1</strong></span>
+          <span>FPS:
+            <select id="sel-fps" onchange="changeFps(this.value)" style="background:#222; color:white; border:1px solid #444; border-radius:3px;">
+              <option value="12">12</option>
+              <option value="24" selected>24</option>
+              <option value="30">30</option>
+              <option value="60">60</option>
+            </select>
+          </span>
+          <span id="lbl-elapsed">0.0s</span>
+        </div>
+      </div>
+
+      <div class="timeline-content">
+        <!-- Layers List -->
+        <div class="timeline-layers">
+          <div class="layers-header">
+            <span>Layers</span>
+            <div>
+              <button class="btn-ctrl" onclick="addNewLayer()" title="New Layer" style="padding: 1px 4px;">+</button>
+              <button class="btn-ctrl" onclick="deleteActiveLayer()" title="Delete Layer" style="padding: 1px 4px;">-</button>
+            </div>
+          </div>
+          <div class="layers-list" id="layers-list">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Frame Track -->
+        <div class="timeline-track-container" id="timeline-track-container" onclick="handleTimelineClick(event)">
+          <div class="frame-ruler" id="frame-ruler">
+            <!-- Ruler numbers 1, 5, 10, 15... -->
+          </div>
+          <div id="frames-grid">
+            <!-- Frame cells rendered per layer -->
+          </div>
+          <!-- Red Playhead -->
+          <div class="playhead-marker" id="playhead-marker" style="left: 0px;">
+            <div class="playhead-head"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Workspace -->
+    <div class="workspace-container">
+
+      <!-- Left Tools Palette -->
+      <aside class="tools-palette">
+        <div class="tool-grid">
+          <button class="btn-flash-tool active" id="tool-select" onclick="setTool('select')" title="Selection Tool (V)">V</button>
+          <button class="btn-flash-tool" id="tool-subselect" onclick="setTool('subselect')" title="Subselection Tool (A)">A</button>
+          <button class="btn-flash-tool" id="tool-transform" onclick="setTool('transform')" title="Free Transform (Q)">Q</button>
+          <button class="btn-flash-tool" id="tool-line" onclick="setTool('line')" title="Line Tool (N)">N</button>
+          <button class="btn-flash-tool" id="tool-pencil" onclick="setTool('pencil')" title="Pencil Tool (Y)">Y</button>
+          <button class="btn-flash-tool" id="tool-brush" onclick="setTool('brush')" title="Brush Tool (B)">B</button>
+          <button class="btn-flash-tool" id="tool-rect" onclick="setTool('rect')" title="Rectangle Tool (R)">R</button>
+          <button class="btn-flash-tool" id="tool-oval" onclick="setTool('oval')" title="Oval Tool (O)">O</button>
+          <button class="btn-flash-tool" id="tool-bucket" onclick="setTool('bucket')" title="Paint Bucket (K)">K</button>
+          <button class="btn-flash-tool" id="tool-eraser" onclick="setTool('eraser')" title="Eraser Tool (E)">E</button>
+          <button class="btn-flash-tool" id="tool-text" onclick="setTool('text')" title="Text Tool (T)">T</button>
+          <button class="btn-flash-tool" id="tool-eyedropper" onclick="setTool('eyedropper')" title="Eyedropper (I)">I</button>
+        </div>
+
+        <div class="color-controls">
+          <div style="font-size: 9px; color: var(--flash-text-dim);">Stroke</div>
+          <div class="color-swatch-box" id="swatch-stroke" style="background-color: #000000;">
+            <input type="color" id="picker-stroke" onchange="changeStrokeColor(this.value)" value="#000000">
+          </div>
+          <div style="font-size: 9px; color: var(--flash-text-dim);">Fill</div>
+          <div class="color-swatch-box" id="swatch-fill" style="background-color: #f97316;">
+            <input type="color" id="picker-fill" onchange="changeFillColor(this.value)" value="#f97316">
+          </div>
+          <div style="font-size: 9px; color: var(--flash-text-dim);">Width</div>
+          <input type="number" id="stroke-width-input" value="2" min="1" max="20" style="width: 32px; background: #222; color:white; border:1px solid #444; font-size:10px; text-align:center;" onchange="changeStrokeWidth(this.value)">
+        </div>
+      </aside>
+
+      <!-- Center Stage -->
+      <main class="stage-area">
+        <div class="stage-wrapper" id="stage-wrapper">
+          <canvas id="flash-stage" width="800" height="600"></canvas>
+        </div>
+      </main>
+
+      <!-- Right Docked Panels -->
+      <aside class="dock-panels">
+        <div class="dock-tabs">
+          <div class="dock-tab active" onclick="switchDockTab('properties')">Properties</div>
+          <div class="dock-tab" onclick="switchDockTab('library')">Library</div>
+          <div class="dock-tab" onclick="switchDockTab('actions')">Actions (AS2/3)</div>
+        </div>
+
+        <!-- Properties Panel Body -->
+        <div class="dock-body" id="panel-properties">
+          <h4 style="margin-bottom: 12px; color: #f97316;">Stage Properties</h4>
+          <div class="prop-row">
+            <label>Dimensions:</label>
+            <div style="display: flex; gap: 4px; width: 120px;">
+              <input type="number" id="stage-w-input" value="800" onchange="updateStageSize()">
+              <span>x</span>
+              <input type="number" id="stage-h-input" value="600" onchange="updateStageSize()">
+            </div>
+          </div>
+          <div class="prop-row">
+            <label>Background:</label>
+            <input type="color" id="stage-bg-input" value="#ffffff" onchange="updateStageBg(this.value)">
+          </div>
+          <div class="prop-row">
+            <label>Frame Rate:</label>
+            <input type="number" id="stage-fps-input" value="24" onchange="changeFps(this.value)">
+          </div>
+
+          <hr style="border:0; border-top: 1px solid #444; margin: 16px 0;">
+
+          <h4 style="margin-bottom: 12px; color: #f97316;">Object Inspector</h4>
+          <div id="inspector-content" style="color: var(--flash-text-dim); font-size: 11px;">
+            No shape selected. Click on a shape with the Selection tool (V) to inspect and edit.
+          </div>
+        </div>
+
+        <!-- Library Panel Body -->
+        <div class="dock-body" id="panel-library" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="color: #f97316;">Symbol Library</h4>
+            <button class="btn-ctrl" onclick="createNewSymbol()">+ New</button>
+          </div>
+          <div id="library-list" style="border: 1px solid #444; height: 200px; background:#222; overflow-y:auto; padding: 4px; margin-bottom: 10px;">
+            <!-- Rendered symbols -->
+          </div>
+          <button class="btn-ctrl" style="width: 100%; justify-content: center;" onclick="placeSelectedSymbol()">Place Instance on Stage</button>
+        </div>
+
+        <!-- Actions Panel Body -->
+        <div class="dock-body" id="panel-actions" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="color: #f97316;">ActionScript</h4>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn-ctrl" onclick="insertCodeSnippet('stop();')">stop()</button>
+              <button class="btn-ctrl" onclick="insertCodeSnippet('play();')">play()</button>
+              <button class="btn-ctrl" onclick="insertCodeSnippet('gotoAndPlay(1);')">goto(1)</button>
+            </div>
+          </div>
+          <textarea class="actionscript-editor" id="actionscript-input" placeholder="// ActionScript for current keyframe&#10;stop();" oninput="saveCurrentFrameActions()"></textarea>
+        </div>
+
+      </aside>
+
+    </div>
+
+  </div>
+
+  <!-- Status Bar -->
+  <footer class="statusbar-flash">
+    <span id="flash-status-left">MelFlash Pro | Flash Player 19 / AVM2 Compatible</span>
+    <span id="flash-status-right">Stage: 800 x 600 @ 24 fps</span>
+  </footer>
+
+  <!-- Hidden Inputs -->
+  <input type="file" id="file-fla-input" accept=".fla,.xfl,.zip" style="display: none;" onchange="handleOpenFla(event)">
+  <input type="file" id="file-swf-input" accept=".swf" style="display: none;" onchange="handleDisassembleSwf(event)">
+
+  <script src="../node_modules/jszip/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

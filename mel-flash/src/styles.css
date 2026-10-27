@@ -1,0 +1,445 @@
+/* MelFlash Professional Studio Styling */
+:root {
+  --flash-bg: #2b2b2b;
+  --flash-panel: #383838;
+  --flash-panel-border: #202020;
+  --flash-header: #1f1f1f;
+  --flash-red: #e11d48;
+  --flash-accent: #f97316;
+  --flash-text: #e2e8f0;
+  --flash-text-dim: #94a3b8;
+  --timeline-bg: #2d2d2d;
+  --timeline-cell: #404040;
+  --timeline-cell-border: #333333;
+  --playhead-red: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--flash-bg);
+  color: var(--flash-text);
+}
+
+/* Menu Bar */
+.menubar {
+  display: flex;
+  align-items: center;
+  background-color: var(--flash-header);
+  border-bottom: 1px solid var(--flash-panel-border);
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.brand-flash {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #fb923c;
+  margin-right: 20px;
+  letter-spacing: 0.5px;
+}
+
+.brand-flash-badge {
+  background: #ea580c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.menu-item {
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--flash-text);
+  border-radius: 3px;
+}
+
+.menu-item:hover {
+  background-color: #4b5563;
+}
+
+/* Main Studio Layout: Top Timeline, Center (Tools + Stage + Panels) */
+.studio-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Timeline Panel */
+.timeline-panel {
+  height: 170px;
+  background-color: var(--timeline-bg);
+  border-bottom: 2px solid var(--flash-panel-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background-color: #242424;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 12px;
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ctrl {
+  background: #404040;
+  border: 1px solid #505050;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-ctrl:hover {
+  background: #4f4f4f;
+  border-color: #707070;
+}
+
+.btn-ctrl.active {
+  background: #ea580c;
+  border-color: #f97316;
+}
+
+.timeline-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.timeline-layers {
+  width: 180px;
+  background-color: #2a2a2a;
+  border-right: 1px solid #1a1a1a;
+  display: flex;
+  flex-direction: column;
+}
+
+.layers-header {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background-color: #202020;
+  font-size: 11px;
+  color: var(--flash-text-dim);
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.layers-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.layer-item {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 11px;
+  border-bottom: 1px solid #333333;
+  cursor: pointer;
+}
+
+.layer-item.active {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.timeline-track-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background-color: #1f1f1f;
+}
+
+.frame-ruler {
+  height: 24px;
+  display: flex;
+  background-color: #222222;
+  border-bottom: 1px solid #111111;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.ruler-cell {
+  width: 14px;
+  height: 100%;
+  border-right: 1px solid #2d2d2d;
+  font-size: 9px;
+  color: #888888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.frame-row {
+  height: 24px;
+  display: flex;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.frame-cell {
+  width: 14px;
+  height: 100%;
+  border-right: 1px solid #303030;
+  background-color: #383838;
+  cursor: pointer;
+  position: relative;
+}
+
+.frame-cell.keyframe::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background-color: #000000;
+  border-radius: 50%;
+}
+
+.frame-cell.has-action::before {
+  content: 'a';
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  font-size: 8px;
+  color: #fbbf24;
+  font-weight: 900;
+}
+
+.playhead-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--playhead-red);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.playhead-head {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 12px;
+  height: 14px;
+  background-color: var(--playhead-red);
+  border-radius: 2px;
+}
+
+/* Workspace Area (Toolbar + Stage + Right Panels) */
+.workspace-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Tools Palette */
+.tools-palette {
+  width: 52px;
+  background-color: var(--flash-panel);
+  border-right: 1px solid var(--flash-panel-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  gap: 4px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+  width: 100%;
+}
+
+.btn-flash-tool {
+  width: 22px;
+  height: 22px;
+  background: #2b2b2b;
+  border: 1px solid #444444;
+  color: var(--flash-text);
+  border-radius: 3px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.btn-flash-tool:hover {
+  background: #3e3e3e;
+  border-color: #666;
+}
+
+.btn-flash-tool.active {
+  background: #ea580c;
+  border-color: #f97316;
+  color: white;
+}
+
+.color-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-swatch-box {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #666;
+  border-radius: 3px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.color-swatch-box input[type="color"] {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Stage Canvas Area */
+.stage-area {
+  flex: 1;
+  background-color: #1e1e1e;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+}
+
+.stage-wrapper {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  position: relative;
+}
+
+#flash-stage {
+  background: white;
+  display: block;
+}
+
+/* Right Docked Panels (Properties, Library, Actions) */
+.dock-panels {
+  width: 280px;
+  background-color: var(--flash-panel);
+  border-left: 1px solid var(--flash-panel-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.dock-tabs {
+  display: flex;
+  background: #252525;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.dock-tab {
+  flex: 1;
+  text-align: center;
+  padding: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--flash-text-dim);
+  border-bottom: 2px solid transparent;
+}
+
+.dock-tab.active {
+  color: white;
+  border-color: #ea580c;
+  background: var(--flash-panel);
+}
+
+.dock-body {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.prop-row label {
+  color: var(--flash-text-dim);
+  font-size: 11px;
+}
+
+.prop-row input, .prop-row select {
+  background: #242424;
+  border: 1px solid #444;
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  width: 120px;
+}
+
+.actionscript-editor {
+  width: 100%;
+  height: 280px;
+  background: #1e1e1e;
+  color: #38bdf8;
+  font-family: "Fira Code", monospace;
+  font-size: 12px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+/* Bottom Status Bar */
+.statusbar-flash {
+  height: 22px;
+  background-color: #1a1a1a;
+  border-top: 1px solid #111111;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 11px;
+  color: #888888;
+}
