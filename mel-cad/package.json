@@ -1,0 +1,14 @@
+{
+  "name": "mel-cad",
+  "version": "1.0.0",
+  "description": "MelCAD Pro - Professional Computer-Aided Design Studio with Native AutoCAD DWG & DXF Support",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^24.2.2"
+  }
+}

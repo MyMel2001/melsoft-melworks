@@ -1,0 +1,286 @@
+/* MelCAD Pro Professional CAD Styling */
+:root {
+  --cad-bg: #1e1e1e;
+  --cad-panel: #2b2b2b;
+  --cad-panel-dark: #181818;
+  --cad-border: #333333;
+  --cad-ribbon: #252526;
+  --cad-accent: #007acc;
+  --cad-text: #cccccc;
+  --cad-text-bright: #ffffff;
+  --cad-cmd-bg: #1b1b1b;
+  --cad-cmd-text: #ffffff;
+  --grid-line: #2a2a2a;
+  --grid-major: #383838;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--cad-bg);
+  color: var(--cad-text);
+}
+
+/* Title & Quick Access Bar */
+.cad-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--cad-panel-dark);
+  border-bottom: 1px solid var(--cad-border);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.cad-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.cad-badge {
+  background: #0284c7;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 900;
+  font-size: 11px;
+}
+
+/* CAD Ribbon */
+.cad-ribbon {
+  background-color: var(--cad-ribbon);
+  border-bottom: 1px solid var(--cad-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.ribbon-tabs {
+  display: flex;
+  background-color: #1f1f1f;
+  border-bottom: 1px solid var(--cad-border);
+  padding: 0 6px;
+}
+
+.ribbon-tab {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cad-text);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.ribbon-tab.active {
+  color: var(--cad-text-bright);
+  border-bottom: 2px solid var(--cad-accent);
+  background-color: var(--cad-ribbon);
+}
+
+.ribbon-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.ribbon-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 10px;
+  border-right: 1px solid #383838;
+}
+
+.btn-cad {
+  background: #333333;
+  border: 1px solid #444444;
+  color: var(--cad-text-bright);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-cad:hover {
+  background: #404040;
+  border-color: #666666;
+}
+
+.btn-cad.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+}
+
+.cad-select {
+  background: #1e1e1e;
+  border: 1px solid #444444;
+  color: var(--cad-text-bright);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Center CAD Workspace */
+.cad-workspace {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.cad-viewport-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  cursor: crosshair;
+}
+
+#cad-canvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Right Properties & Layers Panel */
+.cad-side-panel {
+  width: 250px;
+  background-color: var(--cad-panel);
+  border-left: 1px solid var(--cad-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: 6px 10px;
+  background: #202020;
+  font-size: 11px;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--cad-border);
+}
+
+.panel-body {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  font-size: 11px;
+}
+
+.prop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.prop-row label {
+  color: #888;
+}
+
+.prop-row input, .prop-row select {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  width: 120px;
+}
+
+/* Bottom Command Line Interface */
+.cad-command-line {
+  height: 90px;
+  background-color: var(--cad-cmd-bg);
+  border-top: 1px solid var(--cad-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.cmd-history {
+  flex: 1;
+  padding: 4px 10px;
+  overflow-y: auto;
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 11px;
+  color: #a3e635;
+  line-height: 1.4;
+}
+
+.cmd-input-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: #141414;
+  border-top: 1px solid #222;
+}
+
+.cmd-prompt {
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-right: 6px;
+}
+
+.cmd-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 11px;
+  color: #ffffff;
+}
+
+/* Bottom Status Bar */
+.cad-statusbar {
+  height: 24px;
+  background-color: var(--cad-panel-dark);
+  border-top: 1px solid var(--cad-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.status-toggles {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-toggle {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #888;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.btn-toggle.active {
+  background: #0284c7;
+  color: white;
+  border-color: #38bdf8;
+}

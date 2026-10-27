@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MelCAD Pro - Computer-Aided Design Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Titlebar -->
+  <header class="cad-titlebar">
+    <div class="cad-brand">
+      <span class="cad-badge">CAD</span>
+      <span>MelCAD Pro - [Drawing1.dxf]</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn-cad" onclick="newDrawing()">New</button>
+      <button class="btn-cad" onclick="triggerOpen()">Open DXF/DWG...</button>
+      <button class="btn-cad" onclick="exportDxf()" style="color: #38bdf8; font-weight: bold;">Save DXF</button>
+      <button class="btn-cad" onclick="exportSvgFile()">Export SVG</button>
+    </div>
+  </header>
+
+  <!-- Ribbon -->
+  <div class="cad-ribbon">
+    <div class="ribbon-tabs">
+      <div class="ribbon-tab active" onclick="switchRibbonTab('home')">Home</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('insert')">Insert</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('annotate')">Annotate</div>
+      <div class="ribbon-tab" onclick="switchRibbonTab('view')">View</div>
+    </div>
+
+    <!-- Home Tab Content -->
+    <div class="ribbon-row" id="tab-home">
+      <!-- Draw Tools -->
+      <div class="ribbon-group">
+        <button class="btn-cad active" id="tool-select" onclick="setTool('select')" title="Select / Pick (Esc)">Select</button>
+        <button class="btn-cad" id="tool-line" onclick="setTool('line')" title="Line (L)">Line</button>
+        <button class="btn-cad" id="tool-circle" onclick="setTool('circle')" title="Circle (C)">Circle</button>
+        <button class="btn-cad" id="tool-arc" onclick="setTool('arc')" title="Arc (A)">Arc</button>
+        <button class="btn-cad" id="tool-rect" onclick="setTool('rect')" title="Rectangle (REC)">Rect</button>
+        <button class="btn-cad" id="tool-polyline" onclick="setTool('polyline')" title="Polyline (PL)">Pline</button>
+      </div>
+
+      <!-- Modify Tools -->
+      <div class="ribbon-group">
+        <button class="btn-cad" onclick="deleteSelected()" title="Delete / Erase (Del / E)">Erase</button>
+        <button class="btn-cad" id="tool-dim" onclick="setTool('dimension')" title="Linear Dimension (DIM)">Dimension</button>
+        <button class="btn-cad" id="tool-text" onclick="setTool('text')" title="Text Annotation (T)">Text</button>
+      </div>
+
+      <!-- Layers Control -->
+      <div class="ribbon-group">
+        <span style="font-size: 11px; color: #888;">Layer:</span>
+        <select class="cad-select" id="ribbon-layer-select" onchange="changeCurrentLayer(this.value)">
+          <option value="0">0</option>
+          <option value="WALLS">WALLS</option>
+          <option value="DOORS">DOORS</option>
+          <option value="DIMENSIONS">DIMENSIONS</option>
+        </select>
+        <input type="color" id="ribbon-layer-color" value="#ffffff" title="Layer Color" onchange="changeCurrentLayerColor(this.value)" style="width: 22px; height: 20px; border:none; padding:0; background:transparent; cursor:pointer;">
+        <button class="btn-cad" onclick="promptAddLayer()" title="Add New Layer">+ Layer</button>
+      </div>
+
+      <!-- Preloaded Cleanroom Block Library -->
+      <div class="ribbon-group">
+        <span style="font-size: 11px; color: #888;">Block Library:</span>
+        <select class="cad-select" id="ribbon-block-select" style="max-width: 170px;">
+          <option value="3ft_Single_Door">3ft Single Door (Swing)</option>
+          <option value="3ft_Double_Doors">3ft Double Doors (Pair)</option>
+          <option value="Door_90_Frame_600">Door 90 Frame 600 Wide</option>
+          <option value="Computer_Workstation">Computer Desk Workstation</option>
+          <option value="Compressor_Unit">Compressor Unit</option>
+          <option value="PID_Centrifugal_Pump">P&ID Centrifugal Pump</option>
+        </select>
+        <button class="btn-cad" onclick="insertSelectedBlock()" title="Insert Selected Cleanroom DWG Block">Insert</button>
+      </div>
+
+      <!-- Zoom / View Navigation -->
+      <div class="ribbon-group" style="border-right: none;">
+        <button class="btn-cad" onclick="zoomExtents()" title="Zoom to All Drawing Entities (Z E)">Extents</button>
+        <button class="btn-cad" onclick="zoomIn()" title="Zoom In (+)">+</button>
+        <button class="btn-cad" onclick="zoomOut()" title="Zoom Out (-)">-</button>
+        <button class="btn-cad" onclick="resetView()" title="Reset Origin (0,0)">Origin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main CAD Workspace -->
+  <div class="cad-workspace">
+    <!-- Viewport with Interactive Canvas -->
+    <div class="cad-viewport-container" id="viewport-container">
+      <canvas id="cad-canvas"></canvas>
+    </div>
+
+    <!-- Properties & Layers Sidebar -->
+    <aside class="cad-side-panel">
+      <!-- Properties Inspector -->
+      <div class="panel-header">Entity Properties</div>
+      <div class="panel-body" id="properties-panel" style="max-height: 240px; border-bottom: 1px solid var(--cad-border);">
+        <div id="no-selection-msg" style="color: #666; font-style: italic; text-align: center; margin-top: 20px;">
+          No Entity Selected
+        </div>
+        <div id="entity-props" style="display: none;">
+          <div class="prop-row">
+            <label>Type:</label>
+            <input type="text" id="prop-type" readonly style="color: #38bdf8;">
+          </div>
+          <div class="prop-row">
+            <label>Layer:</label>
+            <select class="cad-select" id="prop-layer" onchange="updateSelectedProp('layer', this.value)"></select>
+          </div>
+          <div class="prop-row">
+            <label>Color:</label>
+            <input type="color" id="prop-color" onchange="updateSelectedProp('hexColor', this.value)" style="width: 120px; height: 20px;">
+          </div>
+          <div class="prop-row" id="row-prop-length">
+            <label>Length / Size:</label>
+            <input type="text" id="prop-length" readonly>
+          </div>
+          <div class="prop-row" id="row-prop-coords">
+            <label>Coordinates:</label>
+            <input type="text" id="prop-coords" readonly>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layer Manager -->
+      <div class="panel-header">Layers</div>
+      <div class="panel-body" style="flex: 1; min-height: 120px;">
+        <div id="layer-list-container">
+          <!-- Dynamically populated layers -->
+        </div>
+      </div>
+
+      <!-- DWG Preview Section -->
+      <div class="panel-header">DWG Native Preview</div>
+      <div class="panel-body" style="height: 140px; padding: 6px; text-align: center;">
+        <div id="dwg-preview-box" style="width: 100%; height: 100%; background: #141414; border: 1px dashed #444; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden;">
+          <span style="font-size: 10px; color: #666;">Open an AutoCAD DWG to preview embedded bitmap</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- AutoCAD Command Line Interface -->
+  <div class="cad-command-line">
+    <div class="cmd-history" id="cmd-history">
+      MelCAD Pro Drafting Engine initialized. Version 2026.1<br>
+      Standard DXF / DWG AC1015/AC1018 support active. Type 'HELP' for available commands.
+    </div>
+    <div class="cmd-input-row">
+      <span class="cmd-prompt">Command:</span>
+      <input type="text" class="cmd-input" id="cmd-input" autocomplete="off" spellcheck="false" placeholder="Type a command (LINE, CIRCLE, ARC, RECT, PLINE, TEXT, DIM, ERASE, ZOOM, OPEN)...">
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <footer class="cad-statusbar">
+    <div id="status-coords">X: 0.0000 &nbsp; Y: 0.0000 &nbsp; Z: 0.0000</div>
+    <div class="status-toggles">
+      <button class="btn-toggle active" id="toggle-grid" onclick="toggleOption('grid')">GRID</button>
+      <button class="btn-toggle active" id="toggle-snap" onclick="toggleOption('snap')">SNAP</button>
+      <button class="btn-toggle active" id="toggle-ortho" onclick="toggleOption('ortho')">ORTHO</button>
+      <button class="btn-toggle active" id="toggle-osnap" onclick="toggleOption('osnap')">OSNAP</button>
+      <button class="btn-toggle" id="toggle-dyn" onclick="toggleOption('dyn')">DYN</button>
+    </div>
+  </footer>
+
+  <!-- Hidden File Input -->
+  <input type="file" id="file-input" accept=".dwg,.dxf" style="display: none;" onchange="handleFileOpen(event)">
+
+  <!-- Load Pure JavaScript Engines -->
+  <script src="dwg.js"></script>
+  <script src="dxf.js"></script>
+  <script src="cad-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
