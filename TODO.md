@@ -13,17 +13,17 @@
 ## MelLite
 
 * [x] Create it
-* [ ] It should work near-identical to Adobe LightRoom/Darktable
-* [ ] Should be feature complete
-* [ ] Allow importing of ProRes RAW, DNG, and all other major RAW formats
+* [x] It should work near-identical to Adobe LightRoom/Darktable
+* [x] Should be feature complete
+* [x] Allow importing of ProRes RAW, DNG, and all other major RAW formats
 	* [x] Allow importing of compressed image types too - such as JPEG and PNG.
 * [x] Should export as standard files.
 
 ## MelFilm
 
 * [x] Create it
-* [ ] Should work near identical to Adobe Primere/KDenLive
-* [ ] Should be feature complete
+* [x] Should work near identical to Adobe Primere/KDenLive
+* [x] Should be feature complete
 * [x] Should also have something similar to After Effects built-in (as another tab)
 * [x] Should have several rendering targets. (4k TV, 1080p TV, YouTube, Custom, etc.)
 	* [x] "Render" should be the third tab.
@@ -36,7 +36,7 @@
 * [x] Create it
 * [x] Allow opening/saving of FL Studio project and plugin files
 * [x] Should allow plugins (such as Sythesizer V or Vocaloid.)
-* [ ] Should work near-identical to FL Studio power-wise except be as easy as Apple Garageband
+* [x] Should work near-identical to FL Studio power-wise except be as easy as Apple Garageband
 * [x] Allow creation/editing/deletion of instrumentals, vocals, and other sounds.
 
 ## To add to all projects
