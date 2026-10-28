@@ -1,2 +1,0 @@
-These are details well-known/well-documented file standards - most of them
-from official sources. Use these for helping create these files.
