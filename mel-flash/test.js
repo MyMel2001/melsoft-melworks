@@ -1,4 +1,4 @@
-// MelFlash Automated Check Test Suite
+// MelCromedia Automated Check Test Suite
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +7,7 @@ const FlaProject = require('./src/fla');
 const As3Engine = require('./src/as3');
 
 async function runTests() {
-  console.log('=== MelFlash Complete Test Suite ===\n');
+  console.log('=== MelCromedia Complete Test Suite ===\n');
 
   // =========================================
   // 1. SWF Binary Generation & AS3 Tags
@@ -288,7 +288,7 @@ async function runTests() {
   console.log('\n========================================');
   console.log('ALL 11 TESTS PASSED');
   console.log('========================================');
-  console.log('MelFlash Professional Studio is fully functional with:');
+  console.log('MelCromedia Professional Studio is fully functional with:');
   console.log('  • SWF v19 binary encoder/decoder');
   console.log('  • AS3 → AVM2 ABC bytecode compiler');
   console.log('  • AVM2 ABC disassembler');

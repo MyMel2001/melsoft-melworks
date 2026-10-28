@@ -1,4 +1,4 @@
-// MelPhoto Studio Electron Main Process
+// MelDraw Studio Electron Main Process
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
@@ -8,7 +8,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    title: 'MelPhoto Studio Professional - Adobe Photoshop Clone',
+    title: 'MelDraw Studio Professional - Adobe Photoshop Clone',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,

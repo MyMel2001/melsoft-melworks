@@ -1,4 +1,4 @@
-// MelFlash Professional Electron Main Process
+// MelCromedia Professional Electron Main Process
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
@@ -8,7 +8,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1360,
     height: 900,
-    title: 'MelFlash Professional - Adobe Flash Studio Clone',
+    title: 'MelCromedia Professional - Adobe Flash Studio Clone',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,

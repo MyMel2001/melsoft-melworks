@@ -1,4 +1,4 @@
-// MelPhoto PSD Binary Encoder & Decoder
+// MelDraw PSD Binary Encoder & Decoder
 // Strictly implements Adobe Photoshop File Formats Specification (November 2019)
 
 class PackBits {

@@ -1,4 +1,4 @@
-// MelFlash SWF Binary Encoder & Decoder (Adobe SWF Specification v19 Compliant with AS3 / AVM2)
+// MelCromedia SWF Binary Encoder & Decoder (Adobe SWF Specification v19 Compliant with AS3 / AVM2)
 
 const As3Engine = (typeof require !== 'undefined') ? require('./as3') : (typeof window !== 'undefined' ? window.As3Engine : null);
 
@@ -341,7 +341,7 @@ class SwfMovie {
         }
       });
       if (!combinedScript.trim()) {
-        combinedScript = '// MelFlash Main Timeline Script\nstop();\ntrace("MelFlash AS3 Initialized");';
+        combinedScript = '// MelCromedia Main Timeline Script\nstop();\ntrace("MelCromedia AS3 Initialized");';
       }
       const abcBuf = As3Engine.As3Compiler.compile(combinedScript, { className: this.documentClass });
       tagChunks.push(SwfMovie.encodeDoABC(0, 'frame_1', abcBuf));

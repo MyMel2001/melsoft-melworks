@@ -1,4 +1,4 @@
-// MelPhoto Image Processing & Filter Engine
+// MelDraw Image Processing & Filter Engine
 
 class FilterEngine {
   static applyBrightnessContrast(imageData, brightness = 0, contrast = 0) {

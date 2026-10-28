@@ -1,4 +1,4 @@
-// MelFlash ActionScript 3 (AS3) & AVM2 Bytecode Compilation and Runtime Engine
+// MelCromedia ActionScript 3 (AS3) & AVM2 Bytecode Compilation and Runtime Engine
 // Specifications:
 // - ActionScript 3.0 Language Reference & Specifications
 // - Adobe ActionScript Virtual Machine 2 (AVM2) Overview (2007-05)

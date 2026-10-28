@@ -1,2 +1,2 @@
-// MelFlash Electron Preload
+// MelCromedia Electron Preload
 window.isElectron = true;

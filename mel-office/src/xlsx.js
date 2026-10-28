@@ -14,7 +14,7 @@ class XlsxSpreadsheet {
       'B2': { value: 5 },
       'C2': { value: 99.99 },
       'D2': { formula: 'B2*C2', value: 499.95 },
-      'A3': { value: 'MelPhoto Studio' },
+      'A3': { value: 'MelDraw Studio' },
       'B3': { value: 10 },
       'C3': { value: 49.99 },
       'D3': { formula: 'B3*C3', value: 499.90 },

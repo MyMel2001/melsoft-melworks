@@ -1,7 +1,7 @@
 {
-  "name": "mel-photoshop",
+  "name": "mel-draw",
   "version": "1.0.0",
-  "description": "MelPhoto Studio - Professional Adobe Photoshop Clone with Native PSD RLE/PackBits Support",
+  "description": "MelDraw - Professional Adobe Photoshop Clone with Native PSD RLE/PackBits Support",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

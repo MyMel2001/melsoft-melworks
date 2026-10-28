@@ -1,10 +1,10 @@
-# MelPhotoshop
+# MelDraw
 
 A standalone web-based image editor implementing authentic Adobe Photoshop user experience.
 
 ## Overview
 
-MelPhotoshop provides a professional raster graphics editor with layers, selections, filters, and comprehensive editing tools.
+MelDraw provides a professional raster graphics editor with layers, selections, filters, and comprehensive editing tools.
 
 ## Features
 
@@ -100,7 +100,7 @@ MelPhotoshop provides a professional raster graphics editor with layers, selecti
 
 ## Architecture
 
-MelPhotoshop follows a dual-mode architecture:
+MelDraw follows a dual-mode architecture:
 
 ### Desktop Mode (Electron)
 ```bash

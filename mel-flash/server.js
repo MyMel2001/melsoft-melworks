@@ -1,4 +1,4 @@
-// MelFlash HTTP Web Server
+// MelCromedia HTTP Web Server
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -35,5 +35,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`MelFlash server running at http://localhost:${PORT}`);
+  console.log(`MelCromedia server running at http://localhost:${PORT}`);
 });

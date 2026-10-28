@@ -1,10 +1,10 @@
-# MelFlash Professional Studio
+# MelCromedia Professional Studio
 
 A standalone web-based Flash animation and development environment implementing authentic Adobe Flash Professional user experience with complete ActionScript 3 support.
 
 ## Overview
 
-MelFlash provides a full-featured animation studio with timeline-based editing, symbol libraries, and ActionScript 3 / AVM2 bytecode compilation and execution.
+MelCromedia provides a full-featured animation studio with timeline-based editing, symbol libraries, and ActionScript 3 / AVM2 bytecode compilation and execution.
 
 ## Features
 
@@ -63,7 +63,7 @@ MelFlash provides a full-featured animation studio with timeline-based editing, 
 
 ## Architecture
 
-MelFlash follows a dual-mode architecture:
+MelCromedia follows a dual-mode architecture:
 
 ### Desktop Mode (Electron)
 ```bash

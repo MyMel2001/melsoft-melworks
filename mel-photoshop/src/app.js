@@ -1,4 +1,4 @@
-// MelPhoto Studio Professional Client Engine
+// MelDraw Studio Professional Client Engine
 // Complete Adobe Photoshop Clone with Free Transform (Ctrl+T), Selection Marquee (M) Marching Ants, Multi-Layer Compositing, and PSD 8BPS Engine
 
 let docWidth = 800;
@@ -79,7 +79,7 @@ function setupInitialDocument() {
 
   artCtx.fillStyle = '#0f172a';
   artCtx.font = 'bold 36px sans-serif';
-  artCtx.fillText('MelPhoto Professional', 180, 440);
+  artCtx.fillText('MelDraw Professional', 180, 440);
 
   artCtx.font = '18px sans-serif';
   artCtx.fillStyle = '#64748b';
@@ -182,7 +182,7 @@ function handleMouseDown(e) {
   }
 
   if (currentTool === 'text') {
-    const text = prompt('Enter text for layer:', 'MelPhoto Studio');
+    const text = prompt('Enter text for layer:', 'MelDraw Studio');
     if (text) {
       applyWithClip(ctx, () => {
         ctx.fillStyle = fgColor;
@@ -934,7 +934,7 @@ function savePsd() {
 
   const psdBytes = buildPsdBinary(w, h, psdLayers);
   const blob = new Blob([new Uint8Array(psdBytes)], { type: 'application/octet-stream' });
-  downloadBlob(blob, 'MelPhoto-Document.psd');
+  downloadBlob(blob, 'MelDraw-Document.psd');
 }
 
 function buildPsdBinary(width, height, psdLayers) {
@@ -1108,7 +1108,7 @@ function loadPsdBuffer(buf) {
 function exportPng() {
   const mainCanvas = document.getElementById('canvas-main');
   mainCanvas.toBlob((blob) => {
-    downloadBlob(blob, 'MelPhoto-Export.png');
+    downloadBlob(blob, 'MelDraw-Export.png');
   }, 'image/png');
 }
 

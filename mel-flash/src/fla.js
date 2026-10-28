@@ -1,4 +1,4 @@
-// MelFlash Project (FLA / XFL) Encoder & Decoder
+// MelCromedia Project (FLA / XFL) Encoder & Decoder
 // Implements DOMDocument XFL standard & archive structure from cleanroom specification
 const JSZipLib = (typeof JSZip !== 'undefined') ? JSZip : ((typeof require !== 'undefined') ? require('jszip') : (typeof window !== 'undefined' ? window.JSZip : null));
 

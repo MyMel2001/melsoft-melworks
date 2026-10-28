@@ -1,4 +1,4 @@
-// MelFlash Professional Studio Client Engine
+// MelCromedia Professional Studio Client Engine
 // Complete Adobe Flash Professional Editor with Timeline Tweens, Free Transform (Q), Library Symbols (F8), and ActionScript
 
 const MAX_FRAMES = 60;
@@ -492,7 +492,7 @@ function handleStageMouseDown(e) {
     changeFillColor(hex);
     isDrawing = false;
   } else if (currentTool === 'text') {
-    const text = prompt('Enter Flash Text:', 'MelFlash 2026');
+    const text = prompt('Enter Flash Text:', 'MelCromedia 2026');
     if (text) {
       kf.elements.push({
         type: 'text',

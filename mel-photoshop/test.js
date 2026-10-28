@@ -1,11 +1,11 @@
-// MelPhoto Automated Check Test
+// MelDraw Automated Check Test
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { PsdDocument, PackBits } = require('./src/psd');
 
 async function runTests() {
-  console.log('Testing MelPhoto PSD binary and PackBits engines...');
+  console.log('Testing MelDraw PSD binary and PackBits engines...');
 
   // 1. Test PackBits RLE Compression & Decompression
   const originalData = Buffer.from([
@@ -106,7 +106,7 @@ async function runTests() {
   fs.writeFileSync(path.join(__dirname, 'samples', 'sample.psd'), psdBuf);
   console.log('✓ Sample PSD generated in samples/sample.psd');
 
-  console.log('\nALL MelPhoto Studio TESTS PASSED SUCCESSFULLY!\n');
+  console.log('\nALL MelDraw Studio TESTS PASSED SUCCESSFULLY!\n');
 }
 
 runTests().catch(err => {

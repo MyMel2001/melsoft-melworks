@@ -1,2 +1,2 @@
-// MelPhoto Electron Preload
+// MelDraw Electron Preload
 window.isElectron = true;
