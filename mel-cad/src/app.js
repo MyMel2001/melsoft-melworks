@@ -1239,9 +1239,9 @@ function toggleOption(opt) {
   draw();
 }
 
-function switchRibbonTab(tabName) {
+function switchRibbonTab(tabName, e) {
   document.querySelectorAll('.ribbon-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  e.target.classList.add('active');
 }
 
 function updatePropertiesPanel() {

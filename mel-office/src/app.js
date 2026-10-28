@@ -1,4 +1,8 @@
 // MelOffice 365 Professional Client Application Engine
+const DocxDocument = require('./docx');
+const XlsxSpreadsheet = require('./xlsx');
+const PptxPresentation = require('./pptx');
+
 let currentApp = 'word'; // 'word', 'excel', 'ppt'
 let currentRibbonTab = 'home';
 
@@ -878,7 +882,7 @@ function triggerOpen() {
   document.getElementById('file-input').click();
 }
 
-function handleFileOpen(event) {
+async function handleFileOpen(event) {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -887,13 +891,41 @@ function handleFileOpen(event) {
     const data = e.target.result;
     if (file.name.endsWith('.docx')) {
       switchApp('word');
-      alert(`Loaded Word document "${file.name}".`);
+      try {
+        const doc = await DocxDocument.fromBuffer(data);
+        // Display a placeholder in doc-canvas indicating loaded
+        document.getElementById('doc-canvas').innerHTML = `
+          <h1>${doc.title || 'Loaded Document'}</h1>
+          <p>Word document loaded from file: <b>${file.name}</b></p>
+          <p>${doc.paragraphs.length} paragraphs (simplified preview)</p>
+        `;
+        alert(`Loaded Word document "${file.name}" with ${doc.paragraphs.length} paragraphs.`);
+      } catch (err) {
+        alert('Failed to parse DOCX: ' + err.message);
+      }
     } else if (file.name.endsWith('.xlsx')) {
       switchApp('excel');
-      alert(`Loaded Excel spreadsheet "${file.name}".`);
+      try {
+        const sheet = await XlsxSpreadsheet.fromBuffer(data);
+        // Overwrite excelSheets with loaded cells
+        excelSheets = { 'Sheet1': sheet.cells };
+        recalcExcelGrid(); // Refresh UI
+        alert(`Loaded Excel spreadsheet "${file.name}" with ${Object.keys(sheet.cells).length} cells.`);
+      } catch (err) {
+        alert('Failed to parse XLSX: ' + err.message);
+      }
     } else if (file.name.endsWith('.pptx')) {
       switchApp('ppt');
-      alert(`Loaded PowerPoint presentation "${file.name}".`);
+      try {
+        const deck = await PptxPresentation.fromBuffer(data);
+        pptSlides = deck.slides;
+        currentSlideIndex = 0;
+        renderPptDeck();
+        loadCurrentSlide();
+        alert(`Loaded PowerPoint presentation "${file.name}" with ${deck.slides.length} slides.`);
+      } catch (err) {
+        alert('Failed to parse PPTX: ' + err.message);
+      }
     }
   };
   reader.readAsArrayBuffer(file);
@@ -903,29 +935,42 @@ function saveDocument() {
   exportNativeFile();
 }
 
-function exportNativeFile() {
+async function exportNativeFile() {
   if (currentApp === 'word') {
-    // Generate clean HTML / DOCX
-    const blob = new Blob([document.getElementById('doc-canvas').innerHTML], { type: 'text/html' });
-    downloadBlob(blob, 'MelWord-Document.html');
+    const docx = new DocxDocument({
+      title: document.title || 'MelWord Document',
+      artBorder: currentWordBorder || null,
+      paragraphs: [
+        {
+          style: 'Title',
+          align: 'center',
+          runs: [{ text: 'MelOffice Word Document', bold: true, size: 36, color: '1A73E8' }]
+        },
+        {
+          style: 'Normal',
+          align: 'left',
+          runs: [
+            { text: 'Document saved as OpenXML (DOCX). WordprocessingML content follows ECMA-376.', bold: false, size: 24 }
+          ]
+        }
+      ]
+    });
+    const buf = await docx.exportBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' });
+    downloadBlob(blob, 'MelWord-Document.docx');
   } else if (currentApp === 'excel') {
-    // Export CSV
-    let csv = '';
-    const curData = excelSheets[currentSheetName] || {};
-    for (let r = 1; r <= EXCEL_ROWS; r++) {
-      const row = [];
-      for (let c = 0; c < EXCEL_COLS; c++) {
-        const cell = curData[`${colName(c)}${r}`];
-        row.push(cell ? `"${cell.val}"` : '""');
-      }
-      csv += row.join(',') + '\n';
-    }
-    const blob = new Blob([csv], { type: 'text/csv' });
-    downloadBlob(blob, 'MelExcel-Sheet.csv');
+    const sheet = new XlsxSpreadsheet({
+      cells: excelSheets[currentSheetName] || {}
+    });
+    const buf = await sheet.exportBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml' });
+    downloadBlob(blob, 'MelExcel-Sheet.xlsx');
   } else if (currentApp === 'ppt') {
     saveCurrentSlide();
-    const blob = new Blob([JSON.stringify(pptSlides, null, 2)], { type: 'application/json' });
-    downloadBlob(blob, 'MelPowerPoint-Deck.json');
+    const deck = new PptxPresentation({ slides: pptSlides });
+    const buf = await deck.exportBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml' });
+    downloadBlob(blob, 'MelPowerPoint-Deck.pptx');
   }
 }
 
