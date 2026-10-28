@@ -105,3 +105,16 @@ body {
   font-size: 11px;
   color: #94a3b8;
 }
+
+.ml-crop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.ml-crop-row input {
+  width: 56px;
+}

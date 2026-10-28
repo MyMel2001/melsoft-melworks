@@ -109,6 +109,47 @@ function runTests() {
   assert.ok(rawErr, 'MelLite RAW reader rejects short files');
   console.log('✓ MelLite RAW import engine validated');
 
+  // 9. Test MelLite crop adjustment (region { x, y, width, height } pixels)
+  const cropImg = { width: 4, height: 2, data: new Uint8ClampedArray(8 * 4) };
+  for (let y = 0; y < 2; y++) {
+    for (let x = 0; x < 4; x++) {
+      const o = (y * 4 + x) * 4;
+      cropImg.data[o] = x * 10 + y * 3 + 1;
+      cropImg.data[o + 1] = x * 7 + y * 5 + 2;
+      cropImg.data[o + 2] = x * 3 + y * 2 + 3;
+      cropImg.data[o + 3] = 255;
+    }
+  }
+  const cropOut = MelLiteFilterEngine.apply(cropImg, { crop: { x: 1, y: 0, width: 2, height: 2 } });
+  assert.strictEqual(cropOut.width, 2, 'MelLite crop computes new width');
+  assert.strictEqual(cropOut.height, 2, 'MelLite crop computes new height');
+  assert.strictEqual(cropOut.data.length, 2 * 2 * 4, 'MelLite crop computes new buffer size');
+  assert.strictEqual(cropOut.data[0], 11, 'MelLite crop picks source pixel red at x=1');
+  assert.strictEqual(cropOut.data[4], 21, 'MelLite crop picks source pixel red at x=2');
+  assert.strictEqual(cropOut.data[8], 14, 'MelLite crop picks source pixel red at y=1');
+  assert.strictEqual(cropOut.data[12], 24, 'MelLite crop picks source pixel red at x=2 y=1');
+  console.log('✓ MelLite crop adjustment validated');
+
+  // 10. Test MelLite rotate adjustment (90/180/270 degree rotations)
+  const rot90 = MelLiteFilterEngine.applyRotate(cropImg, 90);
+  assert.strictEqual(rot90.width, 2, 'MelLite rotate 90 swaps dims');
+  assert.strictEqual(rot90.height, 4, 'MelLite rotate 90 swaps dims');
+  assert.strictEqual(rot90.data[0], 4, 'MelLite rotate 90 maps source correctly');
+  const rot180 = MelLiteFilterEngine.applyRotate(cropImg, 180);
+  assert.strictEqual(rot180.width, 4, 'MelLite rotate 180 keeps dims');
+  assert.strictEqual(rot180.height, 2, 'MelLite rotate 180 keeps dims');
+  assert.strictEqual(rot180.data[0], 34, 'MelLite rotate 180 maps source correctly');
+  const rot270 = MelLiteFilterEngine.applyRotate(cropImg, 270);
+  assert.strictEqual(rot270.width, 2, 'MelLite rotate 270 swaps dims');
+  assert.strictEqual(rot270.data[0], 31, 'MelLite rotate 270 maps source correctly');
+  console.log('✓ MelLite rotate adjustment validated');
+
+  // 11. Test MelLite sharpen adjustment (gain-based unsharp strength)
+  const sharpImg = { width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) };
+  const sharpOut = MelLiteFilterEngine.applySharpen(sharpImg, 1);
+  assert.strictEqual(sharpOut.data[0], 200, 'MelLite sharpen applies gain');
+  console.log('✓ MelLite sharpen adjustment validated');
+
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
 

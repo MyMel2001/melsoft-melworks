@@ -86,6 +86,13 @@ async function runTests() {
   } catch (e) { crossfadeErr = true; }
   assert.ok(crossfadeErr, 'MelFilm crossfade rejects inputs count != 2');
 
+  let transitionErr = false;
+  try {
+    await MelFfmpeg.crossfade({ inputs: [{ inputPath: leftPath }, { inputPath: rightPath }], outputPath: xfadePath, transition: 'not-a-transition', duration: 0.5 });
+  } catch (e) { transitionErr = true; }
+  assert.ok(transitionErr, 'MelFilm crossfade rejects unknown transition');
+  console.log('✓ MelFilm crossfade transition validation validated');
+
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }
 

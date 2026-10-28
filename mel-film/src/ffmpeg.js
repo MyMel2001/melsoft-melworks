@@ -1,5 +1,6 @@
 // MelFilm Video Engine - FFMPEG backed import/export/render/post processing
 const { spawn } = require('child_process');
+const { getTransition } = require('./transitions');
 
 function runFfmpeg(args) {
   return new Promise((resolve, reject) => {
@@ -66,7 +67,8 @@ class MelFfmpeg {
 
   static async crossfade({ inputs, outputPath, transition = 'fade', duration = 1 }) {
     if (!Array.isArray(inputs) || inputs.length !== 2) throw new Error('crossfade requires exactly 2 inputs');
-    const filter = '[i0:v][i1:v]xfade=transition=' + transition + ':duration=' + duration + ':offset=0[e0]';
+    const tr = getTransition(transition);
+    const filter = '[i0:v][i1:v]xfade=transition=' + tr.filter + ':duration=' + duration + ':offset=0[e0]';
     const args = ['-y'];
     args.push('-i', inputs[0].inputPath);
     args.push('-i', inputs[1].inputPath);

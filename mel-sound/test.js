@@ -40,8 +40,28 @@ function runTests() {
   assert.strictEqual(parsed.tracks.length, 2, 'MelSound serialize/deserialize preserves tracks');
   assert.strictEqual(parsed.instruments.length, 1, 'MelSound serialize/deserialize preserves instruments');
   assert.strictEqual(parsed.kind, 'vocal', 'MelSound serialize/deserialize preserves kind');
+  assert.strictEqual(parsed.patterns.length, 0, 'MelSound serialize/deserialize preserves patterns');
 
   console.log('✓ MelSound instrument add validated');
+
+  // 2b. Test MelSound pattern management (FL Studio pattern workflow)
+  const pattern = project.addPattern('Verse');
+  assert.strictEqual(project.patterns.length, 1, 'MelSound addPattern creates pattern');
+  assert.strictEqual(pattern.name, 'Verse', 'MelSound pattern name set');
+  assert.ok(pattern.steps[track.id], 'MelSound pattern keyed by track id');
+  assert.strictEqual(Object.keys(pattern.steps).length, 2, 'MelSound pattern seeds steps for all tracks');
+
+  assert.strictEqual(project.setStepOnPattern(pattern.id, track.id, 0, 62), true, 'MelSound setStepOnPattern stores note');
+  assert.strictEqual(project.getStepOnPattern(pattern.id, track.id, 0), 62, 'MelSound getStepOnPattern reads note');
+  assert.strictEqual(project.getStepOnPattern(pattern.id, track.id, 15), 0, 'MelSound pattern default step is rest');
+
+  assert.strictEqual(project.removePattern(pattern.id), 1, 'MelSound removePattern deletes pattern');
+  assert.strictEqual(project.patterns.length, 0, 'MelSound pattern removal updates stack');
+
+  const keptPattern = project.addPattern('Chorus');
+  assert.strictEqual(project.selectPattern(keptPattern.id), keptPattern.id, 'MelSound selectPattern returns pattern id');
+  assert.strictEqual(project.getPattern(keptPattern.id).name, 'Chorus', 'MelSound getPattern reads pattern');
+  console.log('✓ MelSound pattern workflow validated');
 
   // 3. Test MelSound FLP binary writer/reader roundtrip
   const { MelFlsWriter, MelFlsReader } = require('./src/flp');

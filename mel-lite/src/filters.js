@@ -80,7 +80,90 @@ class MelLiteFilterEngine {
     if (adjustments.curves) {
       out = FilterEngine.applyCurves(out, adjustments.curves, 'rgb');
     }
+    if (adjustments.crop) {
+      out = MelLiteFilterEngine.applyCrop(out, adjustments.crop);
+    }
+    if (adjustments.rotate) {
+      out = MelLiteFilterEngine.applyRotate(out, adjustments.rotate);
+    }
+    if (adjustments.sharpen !== undefined) {
+      out = MelLiteFilterEngine.applySharpen(out, adjustments.sharpen);
+    }
     return out;
+  }
+
+  // Crop to region { x, y, width, height } (pixels, origin top-left).
+  static applyCrop(imageData, crop = { x: 0, y: 0, width: 0, height: 0 }) {
+    const src = imageData.data;
+    const sw = imageData.width;
+    const sh = imageData.height;
+    const cw = Math.max(1, Math.round(crop.width) || sw);
+    const ch = Math.max(1, Math.round(crop.height) || sh);
+    const cx = Math.max(0, Math.min(Math.round(crop.x) || 0, Math.max(0, sw - cw)));
+    const cy = Math.max(0, Math.min(Math.round(crop.y) || 0, Math.max(0, sh - ch)));
+    const out = new Uint8ClampedArray(cw * ch * 4);
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        const si = ((cy + y) * sw + (cx + x)) * 4;
+        const di = (y * cw + x) * 4;
+        out[di] = src[si];
+        out[di + 1] = src[si + 1];
+        out[di + 2] = src[si + 2];
+        out[di + 3] = src[si + 3];
+      }
+    }
+    return { width: cw, height: ch, data: out };
+  }
+
+  // Rotate by 90/180/270 degrees (clockwise) around center; returns new dims.
+  static applyRotate(imageData, rotation = 90) {
+    const src = imageData.data;
+    const sw = imageData.width;
+    const sh = imageData.height;
+    const turns = (((Math.round(rotation) % 360) + 360) % 360) / 90;
+    const outW = turns % 2 === 0 ? sw : sh;
+    const outH = turns % 2 === 0 ? sh : sw;
+    const out = new Uint8ClampedArray(outW * outH * 4);
+    const setPx = (x, y, si) => {
+      const di = (y * outW + x) * 4;
+      out[di] = src[si];
+      out[di + 1] = src[si + 1];
+      out[di + 2] = src[si + 2];
+      out[di + 3] = src[si + 3];
+    };
+    if (turns === 0) {
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < outW; x++) setPx(x, y, (y * sw + x) * 4);
+      }
+    } else if (turns === 1) {
+      // 90 CW: new(x, y) <- old(col=y, row=sh-1-x)
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < outW; x++) setPx(x, y, ((sh - 1 - x) * sw + y) * 4);
+      }
+    } else if (turns === 2) {
+      // 180: new(x, y) <- old(sw-1-x, sh-1-y)
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < outW; x++) setPx(x, y, (((sh - 1 - y) * sw) + (sw - 1 - x)) * 4);
+      }
+    } else {
+      // 270 CW (90 CCW): new(x, y) <- old(col=sw-1-y, row=x)
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < outW; x++) setPx(x, y, ((x * sw) + (sw - 1 - y)) * 4);
+      }
+    }
+    return { width: outW, height: outH, data: out };
+  }
+
+  // Sharpen via unsharp-mask-like gain (amount 0 = neutral, >0 sharpens).
+  static applySharpen(imageData, amount = 1) {
+    const data = imageData.data;
+    const gain = 1 + Math.max(0, amount);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = Math.max(0, Math.min(255, data[i] * gain));
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] * gain));
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] * gain));
+    }
+    return imageData;
   }
 }
 

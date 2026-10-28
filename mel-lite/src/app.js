@@ -3,7 +3,7 @@ const { MelLiteFilterEngine } = require('./filters');
 const { MelRawImportEngine } = require('./raw');
 
 let currentImage = null; // { width, height, data }
-let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
+let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0 };
 
 const canvas = document.getElementById('ml-canvas');
 const ctx = canvas.getContext('2d');
@@ -64,15 +64,34 @@ function applyAdjustments() {
     alert('Open an image first.');
     return;
   }
-  currentImage = { ...currentImage, data: MelLiteFilterEngine.apply(currentImage, adjustments).data };
+  const outImg = MelLiteFilterEngine.apply(currentImage, adjustments);
+  currentImage = { width: outImg.width, height: outImg.height, data: outImg.data };
   renderImage();
   updateStatus();
 }
 
 function resetAdjustments() {
-  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0 };
   updateSliders();
 }
+
+function applyCropNow() {
+  if (!currentImage) {
+    alert('Open an image first.');
+    return;
+  }
+  const crop = {
+    x: parseInt(document.getElementById('ml-crop-x').value) || 0,
+    y: parseInt(document.getElementById('ml-crop-y').value) || 0,
+    width: parseInt(document.getElementById('ml-crop-w').value) || currentImage.width,
+    height: parseInt(document.getElementById('ml-crop-h').value) || currentImage.height
+  };
+  adjustments = { ...adjustments, crop };
+  applyAdjustments();
+}
+
+function updateRotate(val) { adjustments.rotate = parseInt(val, 10) || 0; }
+function updateSharpen(val) { adjustments.sharpen = parseFloat(val) || 0; }
 
 function updateSliders() {
   document.getElementById('ml-exp').value = adjustments.exposure;
@@ -86,7 +105,19 @@ function updateSliders() {
   document.getElementById('ml-wb-r').value = adjustments.whiteBalance.r;
   document.getElementById('ml-wb-g').value = adjustments.whiteBalance.g;
   document.getElementById('ml-wb-b').value = adjustments.whiteBalance.b;
+  const crop = adjustments.crop || { x: 0, y: 0, width: currentImage ? currentImage.width : 0, height: currentImage ? currentImage.height : 0 };
+  document.getElementById('ml-crop-x').value = crop.x;
+  document.getElementById('ml-crop-y').value = crop.y;
+  document.getElementById('ml-crop-w').value = crop.width;
+  document.getElementById('ml-crop-h').value = crop.height;
+  document.getElementById('ml-rotate').value = adjustments.rotate;
+  document.getElementById('ml-sharpen').value = adjustments.sharpen;
 }
+
+function updateCropX(val) { if (adjustments.crop) adjustments.crop.x = parseInt(val, 10) || 0; }
+function updateCropY(val) { if (adjustments.crop) adjustments.crop.y = parseInt(val, 10) || 0; }
+function updateCropW(val) { if (adjustments.crop) adjustments.crop.width = parseInt(val, 10) || 0; }
+function updateCropH(val) { if (adjustments.crop) adjustments.crop.height = parseInt(val, 10) || 0; }
 
 function updateExposure(val) { adjustments.exposure = parseFloat(val) || 0; document.getElementById('ml-exp-val').textContent = val; }
 function updateContrast(val) { adjustments.contrast = parseInt(val, 10) || 0; document.getElementById('ml-contrast-val').textContent = val; }
