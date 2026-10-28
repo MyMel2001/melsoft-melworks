@@ -1,5 +1,8 @@
 // MelSound Automated Check Test
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { MelSoundProject } = require('./src/project');
 
 function runTests() {
@@ -132,6 +135,20 @@ function runTests() {
   assert.ok(Math.abs(swungSeq.events[0].time - (1.5 * 60) / (140 * 4)) < 1e-9, 'MelSound swing delays offbeat steps');
 
   console.log('✓ MelSound audio sequence builder validated');
+
+  // 5. Test MelSound WAV export (16-bit PCM render of the sequence)
+  const { renderSequenceWav, saveWav } = require('./src/wav');
+  const wavBuf = renderSequenceWav(mixProject, 44100);
+  assert.strictEqual(wavBuf.toString('ascii', 0, 4), 'RIFF', 'MelSound WAV export writes RIFF header');
+  assert.strictEqual(wavBuf.toString('ascii', 8, 12), 'WAVE', 'MelSound WAV export writes WAVE tag');
+  const dataSize = wavBuf.readUInt32LE(40);
+  assert.ok(dataSize > 0, 'MelSound WAV export data chunk size positive');
+  assert.strictEqual(wavBuf.length, 44 + dataSize, 'MelSound WAV export size exact');
+  const wavOutPath = path.join(os.tmpdir(), 'mel-sound-export.wav');
+  const wavWritten = saveWav(mixProject, wavOutPath, 44100);
+  assert.ok(fs.existsSync(wavOutPath) && fs.statSync(wavOutPath).size > 44, 'MelSound WAV save writes file');
+  assert.strictEqual(wavWritten.length, wavBuf.length, 'MelSound WAV save returns same buffer');
+  console.log('✓ MelSound WAV export validated');
 
   console.log('\nALL MELSOUND TESTS PASSED SUCCESSFULLY!\n');
 }
