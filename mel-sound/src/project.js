@@ -1,10 +1,16 @@
 // MelSound Project Engine - DAW project model with tracks, patterns, instruments and plugins.
 class MelSoundProject {
-  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [] } = {}) {
+  static trackSeq = 0;
+  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [], kind = 'instrumental' } = {}) {
     this.bpm = Math.max(1, Math.min(999, Math.round(Number(bpm) || 120)));
     this.masterGain = Math.max(0, Math.min(10, Number(masterGain) || 1));
     this.tracks = Array.isArray(tracks) ? tracks : [];
     this.instruments = Array.isArray(instruments) ? instruments : [];
+    this.kind = kind || 'instrumental';
+  }
+
+  static create(kind, bpm) {
+    return new MelSoundProject({ bpm, kind: kind || 'instrumental' });
   }
 
   static deserialize(json) {
@@ -14,7 +20,8 @@ class MelSoundProject {
       bpm: data.bpm,
       masterGain: data.masterGain,
       tracks: data.tracks,
-      instruments: data.instruments
+      instruments: data.instruments,
+      kind: data.kind
     });
     project.meta = data.meta || { source: 'mel-sound' };
     return project;
@@ -26,6 +33,7 @@ class MelSoundProject {
       masterGain: this.masterGain,
       tracks: this.tracks,
       instruments: this.instruments,
+      kind: this.kind,
       meta: { source: 'mel-sound' }
     });
   }
@@ -44,15 +52,33 @@ class MelSoundProject {
     return this.masterGain;
   }
 
-  addTrack(name) {
-    const id = 'track-' + Date.now();
-    const track = { id, name: name || ('Track ' + (this.tracks.length + 1)), steps: new Array(16).fill(0) };
+  setKind(kind) {
+    this.kind = kind || 'instrumental';
+    return this.kind;
+  }
+
+  addTrack(name, kind) {
+    const id = 'track-' + (++MelSoundProject.trackSeq);
+    const track = {
+      id,
+      name: name || ('Track ' + (this.tracks.length + 1)),
+      kind: kind || 'instrumental',
+      lyrics: '',
+      steps: new Array(16).fill(0)
+    };
     this.tracks.push(track);
     return track;
   }
 
   removeTrack(trackId) {
     this.tracks = this.tracks.filter((t) => t.id !== trackId);
+  }
+
+  setLyrics(trackId, lyrics) {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (!track) return false;
+    track.lyrics = lyrics || '';
+    return true;
   }
 
   setStep(trackId, step, note) {

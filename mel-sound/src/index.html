@@ -12,6 +12,8 @@
       <button class="ms-btn" id="ms-btn-new" onclick="newProject()">New Project</button>
       <button class="ms-btn" id="ms-btn-open" onclick="triggerOpen()">Open Project...</button>
       <button class="ms-btn" id="ms-btn-save" onclick="saveProject()">Save Project</button>
+      <button class="ms-btn" id="ms-btn-play" onclick="playSequence()">Play</button>
+      <button class="ms-btn" id="ms-btn-stop" onclick="stopSequence()">Stop</button>
     </div>
   </header>
 
@@ -21,6 +23,8 @@
       <div class="ms-field">Master Gain <input type="number" id="ms-gain" value="1" min="0" max="10" step="0.01" oninput="updateGain(this.value)"></div>
       <button class="ms-btn" id="ms-btn-add-track" onclick="addTrack()">Add Track</button>
       <button class="ms-btn" id="ms-btn-remove-track" onclick="removeTrack()">Remove Track</button>
+      <button class="ms-btn" id="ms-btn-save-flp" onclick="saveFls()">Save FLP</button>
+      <input type="file" id="ms-flp-input" accept=".flp,application/octet-stream" style="display:none" onchange="openFls(event)">
       <div class="ms-status" id="ms-status">MelSound | No project open</div>
     </div>
   </main>

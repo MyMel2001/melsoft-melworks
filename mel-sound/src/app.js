@@ -1,7 +1,10 @@
 // MelSound Studio Client Application Engine
 const { MelSoundProject } = require('./project');
+const { MelSoundPlayer } = require('./audio');
+const { MelFlsWriter, MelFlsReader } = require('./flp');
 
 let currentProject = null;
+let player = new MelSoundPlayer();
 
 function updateStatus() {
   document.getElementById('ms-status').textContent = currentProject ? 'MelSound | BPM ' + currentProject.bpm : 'MelSound | No project open';
@@ -75,4 +78,53 @@ function updateBpm(val) {
 function updateGain(val) {
   if (!currentProject) newProject();
   currentProject.setMasterGain(parseFloat(val) || 1);
+}
+
+function playSequence() {
+  if (!currentProject) newProject();
+  const seq = player.play(currentProject);
+  updateStatus();
+  return seq;
+}
+
+function stopSequence() {
+  player.stop();
+  updateStatus();
+}
+
+function saveFls() {
+  if (!currentProject) {
+    alert('Create or open a project first.');
+    return;
+  }
+  const writer = new MelFlsWriter();
+  writer.addTempo(currentProject.bpm);
+  writer.addKind(currentProject.kind);
+  writer.addName('MelSound Project');
+  const buf = writer.build();
+  const bin = Array.from(buf, (b) => String.fromCharCode(b)).join('');
+  const blob = new Blob([bin], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mel-sound-project.flp';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openFls(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const parsed = MelFlsReader.parse(buf);
+    currentProject = new MelSoundProject({
+      bpm: parsed.bpm,
+      kind: parsed.kind
+    });
+    alert('FLP loaded: bpm=' + parsed.bpm + ' kind=' + parsed.kind + ' name=' + parsed.name);
+    updateStatus();
+  };
+  reader.readAsArrayBuffer(file);
 }

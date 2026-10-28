@@ -1,8 +1,10 @@
 // MelFilm Studio Client Application Engine
 const { MelFfmpeg } = require('./ffmpeg');
 const { MelFilmBundle } = require('./bundle');
+const { MelFilmComp } = require('./comp');
 
 let currentVideo = null; // { name, path, url }
+let currentComp = null;
 
 function updateStatus() {
   document.getElementById('mf-status').textContent = currentVideo ? 'MelFilm | ' + currentVideo.name : 'MelFilm | No video open';
@@ -65,6 +67,7 @@ function updateMfPreset(value) {
 function switchMfTab(tab) {
   document.getElementById('mf-panel-edit').classList.toggle('mf-hidden', tab !== 'edit');
   document.getElementById('mf-panel-render').classList.toggle('mf-hidden', tab !== 'render');
+  document.getElementById('mf-panel-comps').classList.toggle('mf-hidden', tab !== 'comps');
 }
 
 async function saveMfBundle() {
@@ -101,4 +104,37 @@ async function loadMfBundle(event) {
     alert('MelFilm bundle loaded: ' + names.join(', '));
   };
   reader.readAsDataURL(file);
+}
+
+function getMfComp() {
+  if (!currentComp) currentComp = MelFilmComp.create('Comp');
+  return currentComp;
+}
+
+function createMfComp() {
+  currentComp = MelFilmComp.create('Comp ' + (MelFilmComp.layerSeq + 1));
+  renderMfComps();
+}
+
+function addMfLayer() {
+  const comp = getMfComp();
+  comp.addLayer('Layer ' + (comp.layers.length + 1));
+  renderMfComps();
+}
+
+function removeMfLayer(layerId) {
+  const comp = getMfComp();
+  comp.removeLayer(layerId);
+  renderMfComps();
+}
+
+function renderMfComps() {
+  const comp = getMfComp();
+  document.getElementById('mf-comp-name').textContent = comp.name;
+  const listEl = document.getElementById('mf-layer-list');
+  if (comp.layers.length === 0) {
+    listEl.innerHTML = '<div class="mf-layer-empty">No layers in comp.</div>';
+    return;
+  }
+  listEl.innerHTML = comp.layers.map((l) => '<div class="mf-layer-row">' + l.name + ' <button class="mf-layer-remove" onclick="removeMfLayer(\'' + l.id + '\')">x</button></div>').join('');
 }

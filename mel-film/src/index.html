@@ -17,6 +17,7 @@
   <nav class="mf-tabs">
     <button class="mf-tab" id="mf-tab-edit" onclick="switchMfTab('edit')">Edit</button>
     <button class="mf-tab" id="mf-tab-render" onclick="switchMfTab('render')">Render</button>
+    <button class="mf-tab" id="mf-tab-comps" onclick="switchMfTab('comps')">Comps</button>
   </nav>
 
   <main class="mf-workspace" id="mf-panel-edit">
@@ -63,6 +64,16 @@
       <button class="mf-btn" id="mf-btn-save-bundle" onclick="saveMfBundle()">Save Bundle...</button>
       <input type="file" id="mf-bundle-input" accept="application/zip,.zip" style="display:none" onchange="loadMfBundle(event)">
       <div class="mf-status" id="mf-status">MelFilm | No video open</div>
+    </div>
+  </main>
+
+  <main class="mf-workspace mf-hidden" id="mf-panel-comps">
+    <div class="mf-comp-panel">
+      <div class="mf-panel-title">Composition</div>
+      <div class="mf-comp-name" id="mf-comp-name">Comp</div>
+      <button class="mf-btn" id="mf-btn-add-comp" onclick="createMfComp()">New Comp</button>
+      <button class="mf-btn" id="mf-btn-add-layer" onclick="addMfLayer()">Add Layer</button>
+      <div class="mf-layer-list" id="mf-layer-list">No layers in comp.</div>
     </div>
   </main>
 

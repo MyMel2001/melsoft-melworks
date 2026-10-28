@@ -140,3 +140,44 @@ body {
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* MelFilm Composition Panel */
+.mf-comp-panel {
+  padding: 16px;
+  background: #1e293b;
+  border-radius: 8px;
+  min-width: 420px;
+}
+
+.mf-comp-name {
+  font-weight: 700;
+  margin: 8px 0;
+  color: #f87171;
+}
+
+.mf-layer-list {
+  margin-top: 12px;
+}
+
+.mf-layer-empty {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.mf-layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #334155;
+  font-size: 13px;
+}
+
+.mf-layer-remove {
+  background: #ef4444;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 8px;
+}

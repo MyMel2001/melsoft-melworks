@@ -53,6 +53,17 @@ async function runTests() {
   assert.strictEqual(prprojDecompressed, prprojXml, 'MelFilm PRPROJ bundle gzip roundtrips project XML');
   console.log('✓ MelFilm project bundle engine validated');
 
+  // 6. Test MelFilm After Effects-style composition engine (comps + layers)
+  const { MelFilmComp } = require('./src/comp');
+  const comp = MelFilmComp.create('Main');
+  const layer1 = comp.addLayer('Background', 'bg.mp4');
+  const layer2 = comp.addLayer('Foreground', 'fg.mp4');
+  assert.strictEqual(comp.layers.length, 2, 'MelFilm comp adds layers');
+  assert.strictEqual(comp.getLayer(layer1.id).name, 'Background', 'MelFilm comp reads layer by id');
+  assert.strictEqual(comp.removeLayer(layer2.id), 1, 'MelFilm comp removes one layer');
+  assert.strictEqual(comp.layers.length, 1, 'MelFilm comp layer removal updates stack');
+  console.log('✓ MelFilm composition engine validated');
+
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }
 
