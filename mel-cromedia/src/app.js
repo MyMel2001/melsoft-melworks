@@ -11,7 +11,7 @@ let isLooping = true;
 let onionSkin = false;
 let playInterval = null;
 
-let currentTool = 'transform'; // 'select', 'subselect', 'transform', 'rect', 'oval', 'line', 'pencil', 'brush', 'eraser', 'bucket', 'eyedropper', 'text'
+let currentTool = 'transform'; // 'select', 'subselect', 'transform', 'marquee', 'rect', 'oval', 'line', 'pencil', 'brush', 'eraser', 'bucket', 'eyedropper', 'text'
 let strokeColor = '#000000';
 let fillColor = '#f97316';
 let strokeWidth = 2;
@@ -47,6 +47,11 @@ let isDrawing = false;
 let startX = 0, startY = 0;
 let currentPath = [];
 let transformHandle = null; // 'nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w', 'rot'
+
+// Marquee Selection State
+let marqueeStart = null; // { x, y }
+let marqueeCurrent = null; // { x, y }
+let marqueeSelection = null; // { x, y, width, height }
 
 // Test Movie Player state
 let testMovieInterval = null;
@@ -447,6 +452,16 @@ function handleStageMouseDown(e) {
   }
   const kf = curLayer.frames[currentFrame];
 
+  if (currentTool === 'marquee') {
+    marqueeStart = { x: pos.x, y: pos.y };
+    marqueeCurrent = { x: pos.x, y: pos.y };
+    marqueeSelection = { x: pos.x, y: pos.y, width: 0, height: 0 };
+    selectedElementIndex = -1;
+    updateInspector(null);
+    renderStage();
+    return;
+  }
+
   if (currentTool === 'select' || currentTool === 'transform') {
     // Check if clicked on a transform handle first
     if (currentTool === 'transform' && selectedElementIndex !== -1) {
@@ -501,7 +516,8 @@ function handleStageMouseDown(e) {
         y: pos.y,
         fill: fillColor,
         stroke: strokeColor,
-        strokeWidth: strokeWidth
+        strokeWidth: strokeWidth,
+        fontSize: 20
       });
     }
     isDrawing = false;
@@ -516,6 +532,17 @@ function handleStageMouseMove(e) {
   const curLayer = layers[activeLayerIndex];
   if (curLayer.locked || !curLayer.visible) return;
   const kf = curLayer.frames[currentFrame];
+
+  if (currentTool === 'marquee') {
+    marqueeCurrent = { x: pos.x, y: pos.y };
+    const x = Math.min(marqueeStart.x, pos.x);
+    const y = Math.min(marqueeStart.y, pos.y);
+    const w = Math.abs(pos.x - marqueeStart.x);
+    const h = Math.abs(pos.y - marqueeStart.y);
+    marqueeSelection = { x, y, width: w, height: h };
+    renderStage();
+    return;
+  }
 
   if ((currentTool === 'select' || currentTool === 'transform') && selectedElementIndex !== -1) {
     const el = kf.elements[selectedElementIndex];
@@ -552,6 +579,26 @@ function handleStageMouseUp(e) {
 
   const w = pos.x - startX;
   const h = pos.y - startY;
+
+  if (currentTool === 'marquee') {
+    // Finalize marquee selection
+    if (marqueeSelection && marqueeSelection.width > 2 && marqueeSelection.height > 2) {
+      selectedElementIndex = -1;
+      for (let i = kf.elements.length - 1; i >= 0; i--) {
+        const el = kf.elements[i];
+        if (isPointInsideElement(marqueeSelection.x + marqueeSelection.width / 2, marqueeSelection.y + marqueeSelection.height / 2, el)) {
+          selectedElementIndex = i;
+          break;
+        }
+      }
+      updateInspector(kf.elements[selectedElementIndex] || null);
+    }
+    marqueeStart = null;
+    marqueeCurrent = null;
+    marqueeSelection = null;
+    renderStage();
+    return;
+  }
 
   if (currentTool === 'rect') {
     kf.elements.push({
@@ -615,13 +662,18 @@ function isPointInsideElement(px, py, el) {
     return px >= el.x && px <= el.x + el.width && py >= el.y && py <= el.y + el.height;
   } else if (el.type === 'line') {
     const d = distToSegment(px, py, el.x1, el.y1, el.x2, el.y2);
-    return d <= 8;
+    // Use stroke width for line hit testing
+    const strokeWidth = el.strokeWidth || 2;
+    return d <= Math.max(8, strokeWidth * 1.5);
   } else if (el.type === 'text') {
     return px >= el.x && px <= el.x + 120 && py >= el.y - 20 && py <= el.y + 10;
   } else if (el.type === 'path') {
+    // For painted objects (paths), use stroke width for hit testing
+    const strokeWidth = (el.strokeWidth || 2) * 2;
+    const threshold = Math.max(8, strokeWidth * 1.5);
     for (let i = 0; i < el.points.length - 1; i++) {
       const d = distToSegment(px, py, el.points[i].x, el.points[i].y, el.points[i + 1].x, el.points[i + 1].y);
-      if (d <= 8) return true;
+      if (d <= threshold) return true;
     }
   }
   return false;
@@ -725,6 +777,21 @@ function renderStage() {
     }
     ctx.stroke();
   }
+
+  // Draw marquee selection box
+  if (currentTool === 'marquee') {
+    const sel = marqueeSelection;
+    if (sel && sel.width > 0 && sel.height > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sel.x + 0.5, sel.y + 0.5, sel.width, sel.height);
+      ctx.restore();
+    }
+  }
 }
 
 function drawElement(ctx, el, isSelected = false) {
@@ -764,7 +831,8 @@ function drawElement(ctx, el, isSelected = false) {
     ctx.lineWidth = el.strokeWidth;
     ctx.stroke();
   } else if (el.type === 'text') {
-    ctx.font = 'bold 20px sans-serif';
+    const fontSize = el.fontSize || 20;
+    ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.fillStyle = el.fill;
     ctx.fillText(el.text, el.x, el.y);
   } else if (el.type === 'path' && el.points) {
@@ -898,7 +966,7 @@ function updateInspector(el) {
     content.innerHTML = 'No shape selected. Click on a shape with Selection (V) or Transform (Q) tool.';
     return;
   }
-  content.innerHTML = `
+  let html = `
     <div class="prop-row">
       <label>Type:</label>
       <input type="text" value="${el.type.toUpperCase()}" readonly style="color:#f97316;">
@@ -909,14 +977,32 @@ function updateInspector(el) {
         <input type="number" value="${Math.round(el.x || el.x1 || 0)}" onchange="updateSelectedProp('x', this.value)">
         <input type="number" value="${Math.round(el.y || el.y1 || 0)}" onchange="updateSelectedProp('y', this.value)">
       </div>
-    </div>
-    <div class="prop-row">
-      <label>W / H:</label>
-      <div style="display:flex; gap:4px; width:120px;">
-        <input type="number" value="${Math.round(el.width || 0)}" onchange="updateSelectedProp('width', this.value)">
-        <input type="number" value="${Math.round(el.height || 0)}" onchange="updateSelectedProp('height', this.value)">
+    </div>`;
+  
+  if (el.type === 'text') {
+    html += `
+      <div class="prop-row">
+        <label>Text Content:</label>
+        <input type="text" value="${el.text || ''}" onchange="updateSelectedProp('text', this.value)">
       </div>
-    </div>
+      <div class="prop-row">
+        <label>Font Size:</label>
+        <input type="number" value="${el.fontSize || 20}" min="6" max="120" onchange="updateSelectedProp('fontSize', this.value)">
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="prop-row">
+        <label>W / H:</label>
+        <div style="display:flex; gap:4px; width:120px;">
+          <input type="number" value="${Math.round(el.width || 0)}" onchange="updateSelectedProp('width', this.value)">
+          <input type="number" value="${Math.round(el.height || 0)}" onchange="updateSelectedProp('height', this.value)">
+        </div>
+      </div>
+    `;
+  }
+  
+  html += `
     <div class="prop-row">
       <label>Fill:</label>
       <input type="color" value="${el.fill || '#f97316'}" onchange="updateSelectedProp('fill', this.value)">
@@ -926,14 +1012,67 @@ function updateInspector(el) {
       <input type="color" value="${el.stroke || '#000000'}" onchange="updateSelectedProp('stroke', this.value)">
     </div>
   `;
+  
+  if (el.type === 'text') {
+    html += `
+      <div class="prop-row">
+        <button onclick="startTextEditing()" style="margin-top:8px; padding:4px 8px; background:#3b82f6; color:white; border:none; border-radius:3px; cursor:pointer;">Edit Text In-Place</button>
+      </div>
+    `;
+  }
+  
+  content.innerHTML = html;
 }
 
 function updateSelectedProp(prop, val) {
   const curLayer = layers[activeLayerIndex];
   const kf = curLayer.frames[currentFrame];
   if (selectedElementIndex !== -1 && kf.elements[selectedElementIndex]) {
-    kf.elements[selectedElementIndex][prop] = (prop === 'fill' || prop === 'stroke') ? val : Number(val);
+    const el = kf.elements[selectedElementIndex];
+    const numericProps = ['x', 'y', 'width', 'height', 'fontSize', 'strokeWidth', 'rotation'];
+    el[prop] = numericProps.includes(prop) ? Number(val) : val;
     renderStage();
+  }
+}
+
+function startTextEditing() {
+  if (selectedElementIndex !== -1 && layers[activeLayerIndex]) {
+    const curLayer = layers[activeLayerIndex];
+    const kf = curLayer.frames[currentFrame];
+    const el = kf.elements[selectedElementIndex];
+    
+    if (el && el.type === 'text') {
+      // Create an in-place text editor
+      const textEditor = document.createElement('div');
+      textEditor.style.position = 'absolute';
+      textEditor.style.left = `${el.x}px`;
+      textEditor.style.top = `${el.y - 20}px`;
+      textEditor.style.backgroundColor = 'white';
+      textEditor.style.border = '1px solid #3b82f6';
+      textEditor.style.padding = '2px 4px';
+      textEditor.style.zIndex = '1000';
+      textEditor.contentEditable = 'true';
+      textEditor.textContent = el.text;
+      
+      document.body.appendChild(textEditor);
+      textEditor.focus();
+      
+      const finishEditing = () => {
+        if (textEditor.parentNode) {
+          textEditor.parentNode.removeChild(textEditor);
+        }
+        el.text = textEditor.textContent;
+        renderStage();
+      };
+      
+      textEditor.addEventListener('blur', finishEditing);
+      textEditor.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finishEditing();
+        }
+      });
+    }
   }
 }
 

@@ -4,6 +4,7 @@ const OPCContainer = require('./opc');
 class DocxDocument {
   constructor(options = {}) {
     this.title = options.title || 'Untitled Document';
+    this.background = options.background || null;
     this.paragraphs = options.paragraphs || [
       {
         style: 'Title',
@@ -31,6 +32,64 @@ class DocxDocument {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
+  }
+
+  static escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  toHtmlParagraphs() {
+    const alignMap = { left: 'left', center: 'center', right: 'right', justify: 'justify' };
+    const html = [];
+    for (const p of this.paragraphs) {
+      const align = alignMap[p.align] || 'left';
+      const style = `text-align:${align};`;
+      const runsHtml = (p.runs || []).map(r => {
+        const parts = [];
+        if (r.bold) parts.push('font-weight:bold');
+        if (r.italic) parts.push('font-style:italic');
+        if (r.underline) parts.push('text-decoration:underline');
+        if (r.strike) parts.push('text-decoration:line-through');
+        if (r.color) parts.push(`color:${r.color}`);
+        if (r.size) parts.push(`font-size:${r.size}px`);
+        const styleAttr = parts.length ? ` style="${parts.join(';')}"` : '';
+        const fontFamily = r.font ? ` style="font-family:${DocxDocument.escapeHtml(r.font)}"` : '';
+        const escapedText = DocxDocument.escapeHtml(r.text || '');
+        const tag = r.bold || r.italic || r.underline ? 'b' : (r.italic ? 'i' : 'span');
+        return `<${tag}${styleAttr}${fontFamily}>${escapedText}</${tag}>`;
+      }).join('');
+      html.push(`<p style="${style}">${runsHtml}</p>`);
+    }
+    return html.join('');
+  }
+
+  toHtmlDocument() {
+    const bodyHtml = this.toHtmlParagraphs();
+    const tablesHtml = (this.tables || []).map(t => {
+      let rowsHtml = '';
+      for (const row of t.rows || []) {
+        rowsHtml += '<tr>';
+        for (const cell of row.cells || []) {
+          rowsHtml += `<td>${DocxDocument.escapeHtml(cell.text || '')}</td>`;
+        }
+        rowsHtml += '</tr>';
+      }
+      return `<table border="1" style="border-collapse:collapse; border:1px solid #cbd5e1;">${rowsHtml}</table>`;
+    }).join('');
+
+    const bgColor = this.background && this.background.color ? this.background.color : '#ffffff';
+    return `
+      <div style="background-color:${bgColor}; padding:40px; font-family:Calibri, Arial, sans-serif; font-size:24px; line-height:1.5;">
+        ${bodyHtml}
+        ${tablesHtml}
+      </div>
+    `;
   }
 
   toXml() {
@@ -187,7 +246,11 @@ class DocxDocument {
       }
     }
 
-    return new DocxDocument({ paragraphs });
+    const doc = new DocxDocument({ paragraphs });
+    // Only surface a title when the document actually declares one (e.g. Title style paragraph)
+    const titlePara = paragraphs.find(p => p.style === 'Title');
+    doc.title = (titlePara && titlePara.runs && titlePara.runs[0] && titlePara.runs[0].text) ? titlePara.runs[0].text : '';
+    return doc;
   }
 }
 

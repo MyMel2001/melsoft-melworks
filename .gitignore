@@ -49,6 +49,9 @@ coverage/
 *.psb
 *.ai
 *.sketch
+*.pdf
+*.docx
+cleanroom-helpers/
 
 # Large binaries
 *.zip

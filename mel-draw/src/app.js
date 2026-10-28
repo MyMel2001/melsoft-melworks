@@ -231,6 +231,26 @@ function handleMouseMove(e) {
     lastX = pos.x;
     lastY = pos.y;
   } else if (currentTool === 'move') {
+    if (activeSelection) {
+      // Move only the selected region, not the whole layer
+      const dx = pos.x - lastX;
+      const dy = pos.y - lastY;
+      applyWithClip(ctx, () => {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, docWidth, docHeight);
+        ctx.globalAlpha = curLayer.opacity;
+        ctx.drawImage(curLayer.canvas, -activeSelection.x + dx, -activeSelection.y + dy);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(curLayer.canvas, 0, 0);
+        ctx.restore();
+        lastX = pos.x;
+        lastY = pos.y;
+      });
+      compositeCanvas();
+      return;
+    }
     const dx = pos.x - lastX;
     const dy = pos.y - lastY;
     translateLayer(curLayer, dx, dy);
@@ -248,6 +268,12 @@ function handleMouseUp(e) {
 
   if (isTransforming) return;
 
+  if (currentTool === 'marquee') {
+    // Finalize selection: keep activeSelection for apply operations (move/delete/copy)
+    compositeCanvas();
+    return;
+  }
+
   const curLayer = layers[activeLayerIndex];
   if (!curLayer || !curLayer.visible) return;
   const ctx = curLayer.ctx;
@@ -255,6 +281,11 @@ function handleMouseUp(e) {
   const pos = getCanvasCoords(e);
   const w = pos.x - lastX;
   const h = pos.y - lastY;
+
+  if (currentTool === 'move') {
+    pushHistory('Move Layer');
+    return;
+  }
 
   applyWithClip(ctx, () => {
     if (currentTool === 'rect') {
@@ -274,7 +305,7 @@ function handleMouseUp(e) {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, docWidth, docHeight);
       pushHistory('Gradient Tool');
-    } else if (currentTool === 'brush' || currentTool === 'pencil' || currentTool === 'eraser' || currentTool === 'move') {
+    } else if (currentTool === 'brush' || currentTool === 'pencil' || currentTool === 'eraser') {
       pushHistory(currentTool.charAt(0).toUpperCase() + currentTool.slice(1));
     }
   });
@@ -911,8 +942,143 @@ function setupShortcuts() {
       setTool('bucket');
     } else if (e.key === 'x' || e.key === 'X') {
       swapColors();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      deleteSelected();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveSelectionWithArrowKeys(e.key);
+    } else if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      copySelection();
+    } else if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      pasteSelection();
+    } else if (e.key === 'd' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      duplicateSelection();
     }
   });
+}
+
+function moveSelectionWithArrowKeys(key) {
+  if (activeSelection) {
+    let dx = 0, dy = 0;
+    if (key === 'ArrowLeft') dx = -1;
+    else if (key === 'ArrowRight') dx = 1;
+    else if (key === 'ArrowUp') dy = -1;
+    else if (key === 'ArrowDown') dy = 1;
+
+    const step = Math.max(1, Math.round(10 / (docWidth / 800)));
+    const moveX = Math.round(dx * step);
+    const moveY = Math.round(dy * step);
+
+    if (activeSelection.x + moveX < 0) return;
+    if (activeSelection.x + moveX + activeSelection.width > docWidth) return;
+    if (activeSelection.y + moveY < 0) return;
+    if (activeSelection.y + moveY + activeSelection.height > docHeight) return;
+
+    activeSelection.x += moveX;
+    activeSelection.y += moveY;
+    renderOverlay();
+  }
+}
+
+function deleteSelected() {
+  if (activeSelection) {
+    // Delete selected region from active layer via mask
+    const curLayer = layers[activeLayerIndex];
+    if (curLayer && curLayer.visible) {
+      applyWithClip(curLayer.ctx, () => {
+        // Paint background color to clear the selection
+        curLayer.ctx.save();
+        curLayer.ctx.fillStyle = '#ffffff';
+        curLayer.ctx.fillRect(activeSelection.x, activeSelection.y, activeSelection.width, activeSelection.height);
+        curLayer.ctx.restore();
+      });
+      compositeCanvas();
+      pushHistory('Delete Selection');
+    }
+    deselect();
+  } else {
+    // Delete selected layer
+    deleteActiveLayer();
+  }
+}
+
+function copySelection() {
+  if (activeSelection && layers[activeLayerIndex]) {
+    const curLayer = layers[activeLayerIndex];
+    const srcCanvas = document.createElement('canvas');
+    srcCanvas.width = docWidth;
+    srcCanvas.height = docHeight;
+    const srcCtx = srcCanvas.getContext('2d');
+    srcCtx.drawImage(curLayer.canvas, 0, 0);
+
+    const dstCanvas = document.createElement('canvas');
+    dstCanvas.width = docWidth;
+    dstCanvas.height = docHeight;
+    const dstCtx = dstCanvas.getContext('2d');
+    dstCtx.drawImage(srcCanvas, 0, 0);
+    dstCtx.setTransform(1, 0, 0, 1, 0, 0);
+    dstCtx.clearRect(0, 0, docWidth, docHeight);
+    dstCtx.drawImage(srcCanvas, 0, 0);
+
+    const clipboardLayer = {
+      name: `${curLayer.name} Copy`,
+      visible: true,
+      opacity: curLayer.opacity,
+      blendMode: curLayer.blendMode,
+      canvas: dstCanvas,
+      ctx: dstCtx
+    };
+    // Push to layers at end
+    layers.push(clipboardLayer);
+    activeLayerIndex = layers.length - 1;
+    renderLayersList();
+    compositeCanvas();
+    pushHistory('Copy Layer');
+  }
+}
+
+function pasteSelection() {
+  // Paste clipboard content at last position
+  const clipboardLayers = layers.filter(l => l.name && l.name.endsWith(' Copy'));
+  // Simply paste as duplicate of active layer at new location
+  // Simplified: push a new layer with current content
+  const curLayer = layers[activeLayerIndex];
+  if (curLayer) {
+    const c = createLayerCanvas();
+    c.getContext('2d').drawImage(curLayer.canvas, 0, 0);
+    layers.push({
+      name: `${curLayer.name} Paste`,
+      visible: true,
+      opacity: curLayer.opacity,
+      blendMode: curLayer.blendMode,
+      canvas: c,
+      ctx: c.getContext('2d')
+    });
+    activeLayerIndex = layers.length - 1;
+    renderLayersList();
+    compositeCanvas();
+    pushHistory('Paste Layer');
+  }
+}
+
+function duplicateSelection() {
+  if (activeSelection) {
+    const curLayer = layers[activeLayerIndex];
+    if (curLayer) {
+      applyWithClip(curLayer.ctx, () => {
+        curLayer.ctx.save();
+        curLayer.ctx.globalAlpha = curLayer.opacity;
+        curLayer.ctx.drawImage(curLayer.canvas, activeSelection.x, activeSelection.y);
+        curLayer.ctx.restore();
+      });
+      compositeCanvas();
+      pushHistory('Duplicate Selection');
+    }
+  }
 }
 
 // --- Native PSD Binary Export ---

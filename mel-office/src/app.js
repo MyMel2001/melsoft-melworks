@@ -28,7 +28,7 @@ let pptSlides = [
     layout: 'title',
     title: 'MelOffice Presentation',
     subtitle: 'ECMA-376 PresentationML Slide Deck',
-    body: '<p>• Full native support for PresentationML (pml.xsd)</p><p>• Dynamic multi-slide presentation manager</p><p>• Export directly to Microsoft PowerPoint .pptx files</p>',
+    body: '<p>• Full native support for PresentationML (pml.xsd)</p><p>• Dynamic multi-slide presentation manager</p><p>• Export directly to MelSlideshows .pptx files</p>',
     notes: 'Speaker notes: Welcome audience to MelOffice PresentationML engine.',
     bg: '#ffffff'
   },
@@ -70,9 +70,9 @@ function switchApp(app) {
   if (app === 'ppt') titlebar.classList.add('ppt-theme');
 
   const appMeta = {
-    word: { icon: 'W', text: 'MelWord - Document1' },
-    excel: { icon: 'X', text: 'MelExcel - Book1' },
-    ppt: { icon: 'P', text: 'MelPowerPoint - Presentation1' }
+    word: { icon: 'D', text: 'MelDocs - Document1' },
+    excel: { icon: 'X', text: 'MelXL - Book1' },
+    ppt: { icon: 'S', text: 'MelSlideshows - Presentation1' }
   };
 
   brandIcon.textContent = appMeta[app].icon;
@@ -373,28 +373,28 @@ function initExcelGrid() {
 
 function loadSampleExcelData() {
   excelSheets['Sheet1'] = {
-    'A1': { val: 'Software Solution', formula: '' },
-    'B1': { val: 'Licenses Sold', formula: '' },
-    'C1': { val: 'Price / Unit ($)', formula: '' },
-    'D1': { val: 'Subtotal ($)', formula: '' },
-    'A2': { val: 'MelOffice 365 Pro', formula: '' },
-    'B2': { val: '120', formula: '' },
-    'C2': { val: '249.99', formula: '' },
-    'D2': { val: '', formula: '=B2*C2' },
-    'A3': { val: 'MelDraw Studio', formula: '' },
-    'B3': { val: '85', formula: '' },
-    'C3': { val: '199.99', formula: '' },
-    'D3': { val: '', formula: '=B3*C3' },
-    'A4': { val: 'MelCromedia Pro', formula: '' },
-    'B4': { val: '64', formula: '' },
-    'C4': { val: '149.99', formula: '' },
-    'D4': { val: '', formula: '=B4*C4' },
-    'A5': { val: 'MelCAD 2026', formula: '' },
-    'B5': { val: '40', formula: '' },
-    'C5': { val: '799.99', formula: '' },
-    'D5': { val: '', formula: '=B5*C5' },
-    'A6': { val: 'TOTAL REVENUE', formula: '' },
-    'D6': { val: '', formula: '=SUM(D2:D5)' }
+    'A1': { value: 'Software Solution', formula: '' },
+    'B1': { value: 'Licenses Sold', formula: '' },
+    'C1': { value: 'Price / Unit ($)', formula: '' },
+    'D1': { value: 'Subtotal ($)', formula: '' },
+    'A2': { value: 'MelOffice 365 Pro', formula: '' },
+    'B2': { value: '120', formula: '' },
+    'C2': { value: '249.99', formula: '' },
+    'D2': { value: '', formula: '=B2*C2' },
+    'A3': { value: 'MelDraw Studio', formula: '' },
+    'B3': { value: '85', formula: '' },
+    'C3': { value: '199.99', formula: '' },
+    'D3': { value: '', formula: '=B3*C3' },
+    'A4': { value: 'MelCromedia Pro', formula: '' },
+    'B4': { value: '64', formula: '' },
+    'C4': { value: '149.99', formula: '' },
+    'D4': { value: '', formula: '=B4*C4' },
+    'A5': { value: 'MelCAD 2026', formula: '' },
+    'B5': { value: '40', formula: '' },
+    'C5': { value: '799.99', formula: '' },
+    'D5': { value: '', formula: '=B5*C5' },
+    'A6': { value: 'TOTAL REVENUE', formula: '' },
+    'D6': { value: '', formula: '=SUM(D2:D5)' }
   };
   recalcExcelGrid();
 }
@@ -409,8 +409,8 @@ function selectCell(coord) {
 
   document.getElementById('selected-cell-id').value = coord;
   const curData = excelSheets[currentSheetName] || {};
-  const cell = curData[coord] || { val: '', formula: '' };
-  document.getElementById('fx-bar').value = cell.formula ? cell.formula : cell.val;
+  const cell = curData[coord] || { value: '', formula: '' };
+  document.getElementById('fx-bar').value = cell.formula ? cell.formula : cell.value;
 
   updateExcelStats([coord]);
 }
@@ -456,9 +456,9 @@ function commitCellFromGrid(coord) {
   if (!excelSheets[currentSheetName]) excelSheets[currentSheetName] = {};
 
   if (text.startsWith('=')) {
-    excelSheets[currentSheetName][coord] = { val: '', formula: text };
+    excelSheets[currentSheetName][coord] = { value: '', formula: text };
   } else {
-    excelSheets[currentSheetName][coord] = { val: text, formula: '' };
+    excelSheets[currentSheetName][coord] = { value: text, formula: '' };
   }
   recalcExcelGrid();
 }
@@ -483,7 +483,7 @@ function acceptFxEdit() {
   if (!excelSheets[currentSheetName]) excelSheets[currentSheetName] = {};
 
   if (val.startsWith('=')) {
-    excelSheets[currentSheetName][selectedCell] = { val: '', formula: val };
+    excelSheets[currentSheetName][selectedCell] = { value: '', formula: val };
   } else {
     excelSheets[currentSheetName][selectedCell] = { val, formula: '' };
   }
@@ -494,13 +494,13 @@ function acceptFxEdit() {
 
 function cancelFxEdit() {
   const curData = excelSheets[currentSheetName] || {};
-  const cell = curData[selectedCell] || { val: '', formula: '' };
-  document.getElementById('fx-bar').value = cell.formula ? cell.formula : cell.val;
+  const cell = curData[selectedCell] || { value: '', formula: '' };
+  document.getElementById('fx-bar').value = cell.formula ? cell.formula : cell.value;
   recalcExcelGrid();
 }
 
 function promptFunctionDialog() {
-  const func = prompt('Enter formula function (SUM, AVERAGE, MIN, MAX, COUNT, IF):', 'SUM');
+  const func = prompt('Enter formula function (SUM, AVERAGE, MIN, MAX, COUNT, IF, PRODUCT, LOOKUP, ABS, ROUND):', 'SUM');
   if (func) {
     insertFormulaTemplate(func.toUpperCase());
   }
@@ -509,6 +509,7 @@ function promptFunctionDialog() {
 function insertFormulaTemplate(func) {
   let template = `=${func}(A1:A5)`;
   if (func === 'IF') template = `=IF(A1>50, "PASS", "FAIL")`;
+  if (func === 'PRODUCT') template = `=PRODUCT(A1:A5)`;
   document.getElementById('fx-bar').value = template;
   acceptFxEdit();
 }
@@ -654,6 +655,47 @@ function evaluateFormulaBrowser(expr, visited = new Set()) {
     return count;
   }
 
+  // IF(cond, trueVal, falseVal)
+  const ifMatch = formula.match(/^IF\(([\s\S]*?),\s*([\s\S]*?),\s*([\s\S]*)\)$/i);
+  if (ifMatch) {
+    const shouldPass = evaluateConditionBrowser(ifMatch[1].trim(), visited);
+    const branch = (shouldPass ? ifMatch[2] : ifMatch[3]).trim();
+    let value = branch;
+    if (/^".*"$/.test(branch)) return branch.slice(1, -1);
+    const num = Number(value);
+    if (value !== '' && !isNaN(num)) return num;
+    const cellVal = getCellValueBrowser(value, visited);
+    const cellNum = Number(cellVal);
+    return isNaN(cellNum) ? cellVal : cellNum;
+  }
+
+  // PRODUCT(range)
+  const prodMatch = formula.match(/^PRODUCT\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/i);
+  if (prodMatch) {
+    const range = parseRange(prodMatch[1], prodMatch[2]);
+    let prod = 1;
+    for (const c of range) {
+      prod *= Number(getCellValueBrowser(c, visited)) || 0;
+    }
+    return prod;
+  }
+
+  // ABS(x)
+  const absMatch = formula.match(/^ABS\(([\s\S]*)\)$/i);
+  if (absMatch) {
+    const val = Number(evaluateFormulaBrowser(absMatch[1], visited)) || 0;
+    return Math.abs(val);
+  }
+
+  // ROUND(x, digits)
+  const roundMatch = formula.match(/^ROUND\(([\s\S]*?),\s*([\s\S]*)\)$/i);
+  if (roundMatch) {
+    const val = Number(evaluateFormulaBrowser(roundMatch[1], visited)) || 0;
+    const digits = roundMatch[2].trim() === '' ? 0 : parseInt(evaluateFormulaBrowser(roundMatch[2], visited), 10) || 0;
+    const factor = Math.pow(10, digits);
+    return Math.round(val * factor) / factor;
+  }
+
   // Math expression like B2*C2
   const replaced = formula.replace(/[A-Z]+[0-9]+/gi, (m) => {
     return Number(getCellValueBrowser(m.toUpperCase(), visited)) || 0;
@@ -680,7 +722,26 @@ function getCellValueBrowser(coord, visited = new Set()) {
   if (cell.formula) {
     return evaluateFormulaBrowser(cell.formula, visited);
   }
-  return cell.val;
+  return cell.value;
+}
+
+function evaluateConditionBrowser(cond, visited = new Set()) {
+  let c = cond.trim().toUpperCase();
+  c = c.replace(/[A-Z]+[0-9]+/g, (m) => {
+    const v = Number(getCellValueBrowser(m, visited)) || 0;
+    return String(v);
+  });
+  const cm = c.match(/^(.+?)(>=|<=|=|>|<)\s*(.+)$/);
+  if (!cm) return true;
+  const left = Number(cm[1]);
+  const right = Number(cm[3]);
+  const op = cm[2];
+  if (op === '>=') return left >= right;
+  if (op === '<=') return left <= right;
+  if (op === '=') return left === right;
+  if (op === '>') return left > right;
+  if (op === '<') return left < right;
+  return true;
 }
 
 function recalcExcelGrid() {
@@ -695,7 +756,7 @@ function recalcExcelGrid() {
         if (cell.formula) {
           td.textContent = evaluateFormulaBrowser(cell.formula);
         } else {
-          td.textContent = cell.val;
+          td.textContent = cell.value;
         }
       } else {
         td.textContent = '';
@@ -748,6 +809,16 @@ function loadCurrentSlide() {
   document.getElementById('slide-body').innerHTML = slide.body || '';
   document.getElementById('slide-notes').value = slide.notes || '';
   document.getElementById('slide-stage').style.backgroundColor = slide.bg || '#ffffff';
+
+  const titleEl = document.getElementById('slide-title');
+  if (titleEl) {
+    if (slide.titleSize) titleEl.style.fontSize = `${slide.titleSize}px`;
+    if (slide.titleBold) titleEl.style.fontWeight = '700';
+  }
+  const subtitleEl = document.getElementById('slide-subtitle');
+  if (subtitleEl) {
+    if (slide.subtitleSize) subtitleEl.style.fontSize = `${slide.subtitleSize}px`;
+  }
 }
 
 function promptAddSlide() {
@@ -819,6 +890,10 @@ function renderSlideShowCurrent() {
   document.getElementById('show-title').innerText = slide.title;
   document.getElementById('show-subtitle').innerText = slide.subtitle;
   document.getElementById('show-body').innerHTML = slide.body;
+  const showTitleEl = document.getElementById('show-title');
+  if (showTitleEl && slide.titleSize) showTitleEl.style.fontSize = `${slide.titleSize}px`;
+  const showSubtitleEl = document.getElementById('show-subtitle');
+  if (showSubtitleEl && slide.subtitleSize) showSubtitleEl.style.fontSize = `${slide.subtitleSize}px`;
   document.getElementById('slideshow-modal').style.backgroundColor = slide.bg === '#ffffff' ? '#0f172a' : slide.bg;
   document.getElementById('slideshow-footer').textContent = `Slide ${slideShowIndex + 1} of ${pptSlides.length} (Space/Arrow to advance, Esc to exit)`;
 }
@@ -853,11 +928,11 @@ function exitSlideShow() {
 function updateStatus() {
   const statusLeft = document.getElementById('status-left');
   if (currentApp === 'word') {
-    statusLeft.textContent = 'MelWord 365 | ISO/IEC 29500 & ECMA-376 Compliant';
+    statusLeft.textContent = 'MelDocs 365 | ISO/IEC 29500 & ECMA-376 Compliant';
   } else if (currentApp === 'excel') {
-    statusLeft.textContent = `MelExcel 365 | Active Sheet: ${currentSheetName} | Auto-calc ON`;
+    statusLeft.textContent = `MelXL 365 | Active Sheet: ${currentSheetName} | Auto-calc ON`;
   } else if (currentApp === 'ppt') {
-    statusLeft.textContent = `MelPowerPoint 365 | Slide ${currentSlideIndex + 1} of ${pptSlides.length}`;
+    statusLeft.textContent = `MelSlideshows 365 | Slide ${currentSlideIndex + 1} of ${pptSlides.length}`;
   }
 }
 
@@ -893,13 +968,14 @@ async function handleFileOpen(event) {
       switchApp('word');
       try {
         const doc = await DocxDocument.fromBuffer(data);
-        // Display a placeholder in doc-canvas indicating loaded
+        // Render full document content into doc-canvas with proper HTML
+        const contentHtml = doc.toHtmlDocument();
         document.getElementById('doc-canvas').innerHTML = `
-          <h1>${doc.title || 'Loaded Document'}</h1>
-          <p>Word document loaded from file: <b>${file.name}</b></p>
-          <p>${doc.paragraphs.length} paragraphs (simplified preview)</p>
+          ${doc.title ? `<h1 style="text-align:center; color:#1A73E8;">${DocxDocument.escapeHtml(doc.title)}</h1>` : ''}
+          ${contentHtml}
         `;
-        alert(`Loaded Word document "${file.name}" with ${doc.paragraphs.length} paragraphs.`);
+        handleWordInput();
+        updateStatus();
       } catch (err) {
         alert('Failed to parse DOCX: ' + err.message);
       }
@@ -938,7 +1014,7 @@ function saveDocument() {
 async function exportNativeFile() {
   if (currentApp === 'word') {
     const docx = new DocxDocument({
-      title: document.title || 'MelWord Document',
+      title: document.title || 'MelDocs Document',
       artBorder: currentWordBorder || null,
       paragraphs: [
         {
@@ -957,20 +1033,20 @@ async function exportNativeFile() {
     });
     const buf = await docx.exportBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' });
-    downloadBlob(blob, 'MelWord-Document.docx');
+    downloadBlob(blob, 'MelDocs-Document.docx');
   } else if (currentApp === 'excel') {
     const sheet = new XlsxSpreadsheet({
       cells: excelSheets[currentSheetName] || {}
     });
     const buf = await sheet.exportBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml' });
-    downloadBlob(blob, 'MelExcel-Sheet.xlsx');
+    downloadBlob(blob, 'MelXL-Sheet.xlsx');
   } else if (currentApp === 'ppt') {
     saveCurrentSlide();
     const deck = new PptxPresentation({ slides: pptSlides });
     const buf = await deck.exportBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml' });
-    downloadBlob(blob, 'MelPowerPoint-Deck.pptx');
+    downloadBlob(blob, 'MelSlideshows-Deck.pptx');
   }
 }
 

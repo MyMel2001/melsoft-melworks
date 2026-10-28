@@ -6,7 +6,7 @@ class PptxPresentation {
     this.slides = options.slides || [
       {
         title: 'MelOffice Presentation',
-        subtitle: 'Created with MelPowerPoint (ECMA-376 OpenXML standard)',
+        subtitle: 'Created with MelSlideshows (ECMA-376 OpenXML standard)',
         background: '#1E293B',
         textColor: '#FFFFFF',
         elements: [
@@ -50,7 +50,7 @@ class PptxPresentation {
     xml += `      <p:sp>\n`;
     xml += `        <p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr>\n`;
     xml += `        <p:spPr><a:xfrm><a:off x="457200" y="274320"/><a:ext cx="8229600" cy="1143000"/></a:xfrm></p:spPr>\n`;
-    xml += `        <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" b="1" sz="3600"/><a:t>${PptxPresentation.escapeXml(slide.title)}</a:t></a:r></a:p></p:txBody>\n`;
+    xml += `        <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" b="${slide.titleBold ? '1' : '0'}" sz="${Math.round((slide.titleSize || 36) * 100)}"/><a:t>${PptxPresentation.escapeXml(slide.title)}</a:t></a:r></a:p></p:txBody>\n`;
     xml += `      </p:sp>\n`;
 
     // Subtitle Shape
@@ -58,7 +58,7 @@ class PptxPresentation {
       xml += `      <p:sp>\n`;
       xml += `        <p:nvSpPr><p:cNvPr id="3" name="Subtitle"/><p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="subTitle" idx="1"/></p:nvPr></p:nvSpPr>\n`;
       xml += `        <p:spPr><a:xfrm><a:off x="457200" y="1600200"/><a:ext cx="8229600" cy="4525963"/></a:xfrm></p:spPr>\n`;
-      xml += `        <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="2000"/><a:t>${PptxPresentation.escapeXml(slide.subtitle)}</a:t></a:r></a:p></p:txBody>\n`;
+      xml += `        <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="${Math.round((slide.subtitleSize || 20) * 100)}"/><a:t>${PptxPresentation.escapeXml(slide.subtitle)}</a:t></a:r></a:p></p:txBody>\n`;
       xml += `      </p:sp>\n`;
     }
 
@@ -135,21 +135,138 @@ class PptxPresentation {
     while ((match = sldIdRegex.exec(presXml)) !== null) {
       const slideXml = await opc.getFile(`ppt/slides/slide${index}.xml`);
       if (slideXml) {
-        let title = '';
-        let subtitle = '';
-        const tMatches = [];
-        const tRegex = /<a:t>([\s\S]*?)<\/a:t>/g;
-        let tm;
-        while ((tm = tRegex.exec(slideXml)) !== null) {
-          tMatches.push(tm[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'));
-        }
-        if (tMatches.length > 0) title = tMatches[0];
-        if (tMatches.length > 1) subtitle = tMatches[1];
+        const titleText = { text: '', size: 36, bold: true, color: '#1e293b' };
+        const subtitleText = { text: '', size: 20, bold: false, color: '#475569' };
+        const background = '#FFFFFF';
+        const textColor = '#0F172A';
         const elements = [];
-        for (let i = 2; i < tMatches.length; i++) {
-          elements.push({ type: 'text', text: tMatches[i], x: 80, y: 120 + (i - 2) * 40, size: 18, color: '#334155' });
+
+        const decodeXml = (str) => str
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'");
+
+        const textFromRuns = (rXml) => {
+          let text = '';
+          const rtRegex = /<a:t[^>]*>([\s\S]*?)<\/a:t>/g;
+          let tm;
+          while ((tm = rtRegex.exec(rXml)) !== null) {
+            text += decodeXml(tm[1]);
+          }
+          return text;
+        };
+
+        const formatFromRun = (rXml) => {
+          const bold = /<a:rPr[^>]*b="1"/.test(rXml);
+          const szMatch = rXml.match(/<a:rPr[^>]*sz="([\d.]+)"/);
+          const size = szMatch ? parseFloat(szMatch[1]) / 100 : 18;
+          const colorMatch = rXml.match(/<a:solidFill>[\s\S]*?<a:srgbClr val="([0-9A-Fa-f]+)"/);
+          const color = colorMatch ? '#' + colorMatch[1] : '#334155';
+          const typeface = (rXml.match(/<a:latin typeface="([^"]*)"/) || [])[1];
+          return { bold, size, color, typeface };
+        };
+
+        const resolveImage = async (relId) => {
+          const relsXml = await opc.getFile(`ppt/slides/_rels/slide${index}.xml.rels`);
+          if (!relsXml) return null;
+          const relMatch = relsXml.match(new RegExp(`<Relationship[^>]*Id="${relId}"[^>]*Target="([^"]*)"`, 'i'));
+          if (!relMatch) return null;
+          let path = relMatch[1];
+          if (path.startsWith('/')) path = path.slice(1);
+          const segments = (`ppt/slides/${path}`).split('/');
+          const out = [];
+          for (const seg of segments) {
+            if (!seg || seg === '.') continue;
+            if (seg === '..') { out.pop(); continue; }
+            out.push(seg);
+          }
+          const imgData = await opc.getBinaryFile(out.join('/'));
+          if (imgData) {
+            return { data: imgData, filename: path.split('/').pop().toLowerCase() };
+          }
+          return null;
+        };
+
+        const spRegex = /<p:sp>([\s\S]*?)<\/p:sp>/g;
+        let spMatch;
+        while ((spMatch = spRegex.exec(slideXml)) !== null) {
+          const spXml = spMatch[1];
+          const nameMatch = spXml.match(/<p:cNvPr id="[^"]*"[^>]*name="([^"]*)"/);
+          const phMatchResult = spXml.match(/<p:nvPr>\s*<p:ph([^>]*)>/);
+          const phType = phMatchResult ? (phMatchResult[1].match(/type="([^"]*)"/) || [])[1] : null;
+
+          const offMatch = spXml.match(/<a:xfrm>\s*<a:off x="([\d.]+)" y="([\d.]+)"/);
+          const extMatch = spXml.match(/<a:ext cx="([\d.]+)" cy="([\d.]+)"/);
+          const x = offMatch ? parseFloat(offMatch[1]) / 9525 : 0;
+          const y = offMatch ? parseFloat(offMatch[2]) / 9525 : 0;
+          const w = extMatch ? parseFloat(extMatch[1]) / 9525 : 0;
+          const h = extMatch ? parseFloat(extMatch[2]) / 9525 : 0;
+
+          const txBodyMatch = spXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
+          if (!txBodyMatch) continue;
+          const txBodyXml = txBodyMatch[1];
+
+          const embedMatch = txBodyXml.match(/<a:blip\s+r:embed="([^"]+)"/);
+          if (embedMatch) {
+            const imgData = await resolveImage(embedMatch[1]);
+            if (imgData) {
+              elements.push({
+                type: 'image',
+                data: imgData.data,
+                filename: imgData.filename,
+                x, y, w, h,
+                name: (nameMatch ? nameMatch[1] : '') || 'Image'
+              });
+            }
+          }
+
+          const pRegex = /<a:p>([\s\S]*?)<\/a:p>/g;
+          let pMatch;
+          while ((pMatch = pRegex.exec(txBodyXml)) !== null) {
+            const pXml = pMatch[1];
+            const rRegex = /<a:r>([\s\S]*?)<\/a:r>/g;
+            let rMatch;
+            const runs = [];
+            while ((rMatch = rRegex.exec(pXml)) !== null) {
+              runs.push({ text: textFromRuns(rMatch[1]), ...formatFromRun(rMatch[1]) });
+            }
+            const text = runs.map(r => r.text).join('');
+            if (!text) continue;
+            const runFmt = runs[0];
+            elements.push({
+              type: 'text',
+              text,
+              x, y, w, h,
+              size: runFmt ? runFmt.size : 18,
+              bold: runFmt ? runFmt.bold : false,
+              color: runFmt ? runFmt.color : '#334155'
+            });
+            if (phType === 'title' && !titleText.text) {
+              titleText.text = text;
+              titleText.size = runFmt ? runFmt.size : 18;
+              titleText.bold = runFmt ? runFmt.bold : false;
+              titleText.color = runFmt ? runFmt.color : '#1e293b';
+            } else if (phType === 'subTitle' && !subtitleText.text) {
+              subtitleText.text = text;
+              subtitleText.size = runFmt ? runFmt.size : 18;
+              subtitleText.bold = runFmt ? runFmt.bold : false;
+              subtitleText.color = runFmt ? runFmt.color : '#475569';
+            }
+          }
         }
-        slides.push({ title, subtitle, background: '#FFFFFF', textColor: '#0F172A', elements });
+
+        slides.push({
+          title: titleText.text,
+          subtitle: subtitleText.text,
+          titleSize: titleText.size,
+          subtitleSize: subtitleText.size,
+          titleBold: titleText.bold,
+          background,
+          textColor,
+          elements
+        });
       }
       index++;
     }

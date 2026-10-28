@@ -47,6 +47,25 @@ class XlsxSpreadsheet {
     return { col: m[1], row: parseInt(m[2], 10), colNum: XlsxSpreadsheet.colToNumber(m[1]) };
   }
 
+  evaluateCondition(cond, visited = new Set()) {
+    let c = cond.trim().toUpperCase();
+    c = c.replace(/[A-Z]+[0-9]+/g, (m) => {
+      const v = Number(this.getCellValue(m, visited)) || 0;
+      return String(v);
+    });
+    const cm = c.match(/^(.+?)(>=|<=|=|>|<)\s*(.+)$/);
+    if (!cm) return true;
+    const left = Number(cm[1]);
+    const right = Number(cm[3]);
+    const op = cm[2];
+    if (op === '>=') return left >= right;
+    if (op === '<=') return left <= right;
+    if (op === '=') return left === right;
+    if (op === '>') return left > right;
+    if (op === '<') return left < right;
+    return true;
+  }
+
   evaluateFormula(formula, visited = new Set()) {
     if (!formula) return 0;
     let expr = formula.trim();
@@ -105,6 +124,88 @@ class XlsxSpreadsheet {
       if (fn === 'COUNT') return vals.length;
       if (fn === 'MIN') return vals.length ? Math.min(...vals) : 0;
       if (fn === 'MAX') return vals.length ? Math.max(...vals) : 0;
+    }
+
+    // Check LOOKUP(lookup_value, lookup_vector) - Horizontal or vertical lookup
+    const lookupMatch = expr.match(/^LOOKUP\(([A-Z]+[0-9]+),\s*([A-Z]+)(\d+):([A-Z]+)(\d+)\)$/i);
+    if (lookupMatch) {
+      const lookupValue = lookupMatch[1]; // Cell to find (e.g., C2)
+      const startCol = lookupMatch[2];
+      const startRow = parseInt(lookupMatch[3]);
+      const endCol = lookupMatch[4];
+      const endRow = parseInt(lookupMatch[5]);
+      const lookupParsed = XlsxSpreadsheet.parseCoord(lookupValue);
+      const lookupColNum = lookupParsed ? lookupParsed.colNum : XlsxSpreadsheet.colToNumber(startCol);
+      const lookupRowNum = lookupParsed ? lookupParsed.row : startRow;
+      const lookupTarget = this.getCellValue(lookupValue, new Set());
+
+      if (startCol === endCol) {
+        // Vertical lookup - search down a column
+        for (let r = startRow; r <= endRow; r++) {
+          const key = `${startCol}${r}`;
+          const cellVal = this.getCellValue(key, new Set());
+          if (cellVal === lookupTarget) {
+            return this.getCellValue(`${XlsxSpreadsheet.numberToCol(lookupColNum)}${r}`, new Set());
+          }
+        }
+      } else if (startRow === endRow) {
+        // Horizontal lookup - search across a row
+        const row = startRow;
+        const startColNum = XlsxSpreadsheet.colToNumber(startCol);
+        const endColNum = XlsxSpreadsheet.colToNumber(endCol);
+        for (let c = startColNum; c <= endColNum; c++) {
+          const key = `${XlsxSpreadsheet.numberToCol(c)}${row}`;
+          const cellVal = this.getCellValue(key, new Set());
+          if (cellVal === lookupTarget) {
+            const resultRow = lookupParsed ? lookupParsed.row : parseInt(lookupValue.slice(1), 10);
+            return this.getCellValue(`${XlsxSpreadsheet.numberToCol(c)}${resultRow}`, new Set());
+          }
+        }
+      }
+      return '';
+    }
+
+    // Check IF(cond, trueVal, falseVal)
+    const ifMatch = expr.match(/^IF\(([\s\S]*?),\s*([\s\S]*?),\s*([\s\S]*)\)$/i);
+    if (ifMatch) {
+      const shouldPass = this.evaluateCondition(ifMatch[1], visited);
+      const branch = (shouldPass ? ifMatch[2] : ifMatch[3]).trim();
+      let value = branch;
+      if (/^".*"$/.test(branch)) value = branch.slice(1, -1);
+      return this.evaluateFormula(value, visited);
+    }
+
+    // Check PRODUCT(range)
+    const prodMatch = expr.match(/^PRODUCT\(([A-Z]+[0-9]+):([A-Z]+[0-9]+)\)$/i);
+    if (prodMatch) {
+      const start = XlsxSpreadsheet.parseCoord(prodMatch[1]);
+      const end = XlsxSpreadsheet.parseCoord(prodMatch[2]);
+      let prod = 1;
+      let count = 0;
+      for (let r = Math.min(start.row, end.row); r <= Math.max(start.row, end.row); r++) {
+        for (let c = Math.min(start.colNum, end.colNum); c <= Math.max(start.colNum, end.colNum); c++) {
+          const val = Number(this.getCellValue(`${XlsxSpreadsheet.numberToCol(c)}${r}`, visited)) || 0;
+          prod *= val;
+          count++;
+        }
+      }
+      return count > 0 ? prod : 0;
+    }
+
+    // Check ABS(x)
+    const absMatch = expr.match(/^ABS\(([\s\S]*)\)$/i);
+    if (absMatch) {
+      const val = Number(this.evaluateFormula(absMatch[1], visited)) || 0;
+      return Math.abs(val);
+    }
+
+    // Check ROUND(x, digits)
+    const roundMatch = expr.match(/^ROUND\(([\s\S]*?),\s*([\s\S]*)\)$/i);
+    if (roundMatch) {
+      const val = Number(this.evaluateFormula(roundMatch[1], visited)) || 0;
+      const digits = roundMatch[2].trim() === '' ? 0 : parseInt(this.evaluateFormula(roundMatch[2], visited), 10) || 0;
+      const factor = Math.pow(10, digits);
+      return Math.round(val * factor) / factor;
     }
 
     // Arithmetic expressions e.g. B2*C2 or A1+B1
