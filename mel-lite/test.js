@@ -84,7 +84,7 @@ function runTests() {
     dng[p] = e.tag & 0xff; dng[p + 1] = Math.floor(e.tag / 256) & 0xff; // tag LE
     dng[p + 2] = e.type & 0xff; dng[p + 3] = Math.floor(e.type / 256) & 0xff;
     dng[p + 4] = e.count & 0xff; dng[p + 5] = Math.floor(e.count / 256) & 0xff;
-    dng[p + 6] = e.value & 0xff; dng[p + 7] = Math.floor(e.value / 256) & 0xff;
+    dng[p + 6] = 0; dng[p + 7] = 0;
     dng[p + 8] = e.value & 0xff; dng[p + 9] = Math.floor(e.value / 256) & 0xff;
     dng[p + 10] = 0; dng[p + 11] = 0;
     p += 12;

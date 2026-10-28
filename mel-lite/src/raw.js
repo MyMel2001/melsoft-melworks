@@ -1,8 +1,8 @@
 // MelLite RAW Import Engine - reads uncompressed baseline DNG/TIFF image data.
-// DNG layout: II/MM byte order, magic 42, IFD0 offset, IFD entries, strip pixel data.
-// Supported subset: Compression=1 (none), BitsPerSample=16, SamplesPerPixel=3, single strip.
+// TIFF-family layout: byte order, magic 42, IFD0 offset, IFD entries, strip pixel data.
+// Supported subset: Compression=1 (none), BitsPerSample=16, SamplesPerPixel=3.
 class MelRawImportEngine {
-  static parseDng(bytes) {
+  static parseTiff(bytes) {
     const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (buf.length < 8) throw new Error('RAW file too short');
     const little = buf[0] === 0x49 && buf[1] === 0x49; // "II"
@@ -30,7 +30,6 @@ class MelRawImportEngine {
     const heightEntry = getEntry(257);
     const bitsEntry = getEntry(258);
     const compressionEntry = getEntry(259);
-    const photoEntry = getEntry(262);
     const samplesEntry = getEntry(277);
     const rowsEntry = getEntry(278);
     const stripOffsetsEntry = getEntry(273);
@@ -43,33 +42,60 @@ class MelRawImportEngine {
     const compression = compressionEntry ? compressionEntry.value : 1;
     const samplesPerPixel = samplesEntry ? samplesEntry.value : 3;
     const rowsPerStrip = rowsEntry ? rowsEntry.value : height;
-    const stripOffsets = stripOffsetsEntry ? stripOffsetsEntry.value : 0;
-    const stripByteCounts = stripByteCountsEntry ? stripByteCountsEntry.value : 0;
 
     if (compression !== 1) throw new Error('RAW compression not supported: ' + compression);
     if (bitsPerSample !== 16) throw new Error('RAW bit depth not supported: ' + bitsPerSample);
-    const stripBytes = stripByteCounts;
-    const stripStart = stripOffsets;
-    if (stripStart + stripBytes > buf.length) throw new Error('RAW strip data out of bounds');
 
-    const data = buf.subarray(stripStart, stripStart + stripBytes);
-    return { width, height, bitsPerSample, compression, samplesPerPixel, stripByteCounts, data };
+    const offsets = stripOffsetsEntry && stripOffsetsEntry.count > 1
+      ? MelRawImportEngine.readI32Array(buf, stripOffsetsEntry.value, stripOffsetsEntry.count, little)
+      : [stripOffsetsEntry ? stripOffsetsEntry.value : 0];
+    const counts = stripByteCountsEntry && stripByteCountsEntry.count > 1
+      ? MelRawImportEngine.readI32Array(buf, stripByteCountsEntry.value, stripByteCountsEntry.count, little)
+      : [stripByteCountsEntry ? stripByteCountsEntry.value : 0];
+    const totalBytes = counts.reduce((n, c) => n + c, 0);
+    const data = new Uint8Array(totalBytes);
+    let acc = 0;
+    for (let s = 0; s < counts.length; s++) {
+      data.set(buf.subarray(offsets[s], offsets[s] + counts[s]), acc);
+      acc += counts[s];
+    }
+
+    return { width, height, bitsPerSample, compression, samplesPerPixel, rowsPerStrip, data };
   }
 
-  // Convert raw 16-bit strip data to 8-bit RGBA pixel array (scaled by 1/257).
+  static readI32Array(buf, offset, count, little) {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      const o = offset + i * 4;
+      out.push(little ? (buf[o] | (buf[o + 1] << 8) | (buf[o + 2] << 16) | (buf[o + 3] << 24)) : ((buf[o] << 24) | (buf[o + 1] << 16) | (buf[o + 2] << 8) | buf[o + 3]));
+    }
+    return out;
+  }
+
+  static parseDng(bytes) {
+    const parsed = MelRawImportEngine.parseTiff(bytes);
+    if (!parsed || !parsed.width) throw new Error('RAW file missing dimensions');
+    return parsed;
+  }
+
+  // Convert raw 16-bit strip data to 8-bit RGBA pixel array (scaled by 1/65535).
   static toRGBA(raw) {
-    const { width, height, data } = raw;
+    const { width, height, data, samplesPerPixel } = raw;
+    const spp = samplesPerPixel || 3;
     const pixels = width * height;
     const out = new Uint8ClampedArray(pixels * 4);
-    for (let i = 0; i < pixels; i++) {
-      const src = i * 6;
-      const r = data[src] | (data[src + 1] << 8);
-      const g = data[src + 2] | (data[src + 3] << 8);
-      const b = data[src + 4] | (data[src + 5] << 8);
-      out[i * 4] = Math.round((r * 255) / 65535);
-      out[i * 4 + 1] = Math.round((g * 255) / 65535);
-      out[i * 4 + 2] = Math.round((b * 255) / 65535);
-      out[i * 4 + 3] = 255;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const si = ((y * width + x) * spp) * 2;
+        const r = data[si] | (data[si + 1] << 8);
+        const g = data[si + 2] | (data[si + 3] << 8);
+        const b = data[si + 4] | (data[si + 5] << 8);
+        const o = (y * width + x) * 4;
+        out[o] = Math.round((r * 255) / 65535);
+        out[o + 1] = Math.round((g * 255) / 65535);
+        out[o + 2] = Math.round((b * 255) / 65535);
+        out[o + 3] = 255;
+      }
     }
     return { width, height, data: out };
   }
