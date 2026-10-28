@@ -17,7 +17,7 @@
 * [ ] Should be feature complete
 * [ ] Allow importing of ProRes RAW, DNG, and all other major RAW formats
 	* [ ] Allow importing of compressed image types too - such as JPEG and PNG.
-* [ ] Should export as standard files.
+* [x] Should export as standard files.
 
 ## MelFilm
 
@@ -25,10 +25,10 @@
 * [ ] Should work near identical to Adobe Primere/KDenLive
 * [ ] Should be feature complete
 * [ ] Should also have something similar to After Effects built-in (as another tab)
-* [ ] Should have several rendering targets. (4k TV, 1080p TV, YouTube, Custom, etc.)
-	* [ ] "Render" should be the third tab.
-* [ ] Should be powered by FFMPEG.
-* [ ] Should save/load ZIPed bundles of Adobe Primere and After Effects files.
+* [x] Should have several rendering targets. (4k TV, 1080p TV, YouTube, Custom, etc.)
+	* [x] "Render" should be the third tab.
+* [x] Should be powered by FFMPEG.
+* [x] Should save/load ZIPed bundles of Adobe Primere and After Effects files.
 	* [ ] See: @file-standards/adobe-film-editing-unofficial/main.md for an unofficial specs file for these filetypes.
 
 ## MelSound

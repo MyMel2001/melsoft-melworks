@@ -10,36 +10,61 @@
     <div class="mf-brand">MelFilm</div>
     <div class="mf-actions">
       <button class="mf-btn" id="mf-btn-open" onclick="triggerOpen()">Open Video...</button>
-      <button class="mf-btn" id="mf-btn-export" onclick="exportVideo()">Export Render (MP4)</button>
       <button class="mf-btn" id="mf-btn-poster" onclick="capturePoster()">Capture Poster</button>
     </div>
   </header>
 
-  <main class="mf-workspace">
+  <nav class="mf-tabs">
+    <button class="mf-tab" id="mf-tab-edit" onclick="switchMfTab('edit')">Edit</button>
+    <button class="mf-tab" id="mf-tab-render" onclick="switchMfTab('render')">Render</button>
+  </nav>
+
+  <main class="mf-workspace" id="mf-panel-edit">
     <video id="mf-video" class="mf-video" controls style="max-width: 90%; max-height: 70vh;"></video>
   </main>
 
-  <aside class="mf-panel">
-    <div class="mf-panel-title">Render</div>
-    <label class="mf-field">Resolution
-      <select id="mf-resolution" class="mf-select">
-        <option value="1920x1080">1920x1080 (Full HD)</option>
-        <option value="1280x720" selected>1280x720 (HD)</option>
-        <option value="854x480">854x480 (SD)</option>
-      </select>
-    </label>
-    <label class="mf-field">Format
-      <select id="mf-format" class="mf-select">
-        <option value="mp4" selected>MP4 (H.264)</option>
-        <option value="webm">WebM (VP9)</option>
-      </select>
-    </label>
-    <label class="mf-field">FPS
-      <input type="number" id="mf-fps" value="30" min="1" max="240">
-    </label>
-    <button class="mf-btn" id="mf-btn-apply" onclick="exportVideo()">Start Render</button>
-    <div class="mf-status" id="mf-status">MelFilm | No video open</div>
-  </aside>
+  <main class="mf-workspace mf-hidden" id="mf-panel-render">
+    <div class="mf-render-panel">
+      <div class="mf-panel-title">Render</div>
+      <label class="mf-field">Preset
+        <select id="mf-preset" class="mf-select" onchange="updateMfPreset(this.value)">
+          <option value="custom">Custom</option>
+          <option value="4k-tv">4K TV</option>
+          <option value="1080p-tv">1080p TV</option>
+          <option value="youtube">YouTube</option>
+        </select>
+      </label>
+      <label class="mf-field">Resolution
+        <select id="mf-resolution" class="mf-select">
+          <option value="1920x1080">1920x1080 (Full HD)</option>
+          <option value="1280x720" selected>1280x720 (HD)</option>
+          <option value="854x480">854x480 (SD)</option>
+        </select>
+      </label>
+      <label class="mf-field">Format
+        <select id="mf-format" class="mf-select">
+          <option value="mp4" selected>MP4 (H.264)</option>
+          <option value="webm">WebM (VP9)</option>
+        </select>
+      </label>
+      <label class="mf-field">FPS
+        <input type="number" id="mf-fps" value="30" min="1" max="240">
+      </label>
+      <button class="mf-btn" id="mf-btn-apply" onclick="exportVideo()">Start Render</button>
+      <label class="mf-field">Bundle Format
+        <select id="mf-bundle-format" class="mf-select">
+          <option value="aepx">AE Project (.aepx)</option>
+          <option value="prproj">PR Project (.prproj)</option>
+        </select>
+      </label>
+      <label class="mf-field">Bundle Name
+        <input type="text" id="mf-bundle-name" value="" placeholder="Project name">
+      </label>
+      <button class="mf-btn" id="mf-btn-save-bundle" onclick="saveMfBundle()">Save Bundle...</button>
+      <input type="file" id="mf-bundle-input" accept="application/zip,.zip" style="display:none" onchange="loadMfBundle(event)">
+      <div class="mf-status" id="mf-status">MelFilm | No video open</div>
+    </div>
+  </main>
 
   <input type="file" id="mf-file-input" accept="video/*" style="display:none" onchange="handleVideoFile(event)">
 

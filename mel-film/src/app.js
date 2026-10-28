@@ -1,5 +1,6 @@
 // MelFilm Studio Client Application Engine
 const { MelFfmpeg } = require('./ffmpeg');
+const { MelFilmBundle } = require('./bundle');
 
 let currentVideo = null; // { name, path, url }
 
@@ -45,4 +46,59 @@ async function capturePoster() {
   const outputPath = '/tmp/mel-film-poster-' + Date.now() + '.png';
   await MelFfmpeg.capturePoster({ inputPath: currentVideo.path, outputPath, timeSeconds: 1 });
   alert('Poster saved: ' + outputPath);
+}
+
+function updateMfPreset(value) {
+  const presets = {
+    '4k-tv': { resolution: '3840x2160', fps: 24 },
+    '1080p-tv': { resolution: '1920x1080', fps: 24 },
+    'youtube': { resolution: '1920x1080', fps: 30 },
+    'custom': { resolution: '1920x1080', fps: 30 }
+  };
+  const preset = presets[value] || presets['custom'];
+  if (value !== 'custom') {
+    document.getElementById('mf-resolution').value = preset.resolution;
+    document.getElementById('mf-fps').value = preset.fps;
+  }
+}
+
+function switchMfTab(tab) {
+  document.getElementById('mf-panel-edit').classList.toggle('mf-hidden', tab !== 'edit');
+  document.getElementById('mf-panel-render').classList.toggle('mf-hidden', tab !== 'render');
+}
+
+async function saveMfBundle() {
+  if (!currentVideo) {
+    alert('Open a video first.');
+    return;
+  }
+  const format = document.getElementById('mf-bundle-format').value;
+  const projectName = (document.getElementById('mf-bundle-name') || {}).value || currentVideo.name;
+  const xml = '<?xml version="1.0"?><Project><Name>' + projectName + '</Name></Project>';
+  let buf;
+  if (format === 'prproj') {
+    buf = await MelFilmBundle.savePrproj(projectName, xml);
+  } else {
+    buf = await MelFilmBundle.saveAepx(projectName, xml);
+  }
+  const blob = new Blob([buf], { type: 'application/zip' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mel-film-bundle.' + (format === 'prproj' ? 'prproj' : 'aepx');
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function loadMfBundle(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const buf = Uint8Array.from(atob(e.target.result.split(',')[1] || ''), (c) => c.charCodeAt(0));
+    const result = await MelFilmBundle.loadBundle(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    const names = Object.keys(result.files || {});
+    alert('MelFilm bundle loaded: ' + names.join(', '));
+  };
+  reader.readAsDataURL(file);
 }

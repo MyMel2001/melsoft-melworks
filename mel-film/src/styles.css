@@ -86,3 +86,57 @@ body {
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* MelFilm Tabs */
+.mf-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px 0 12px;
+  background: #1e293b;
+}
+
+.mf-tab {
+  padding: 6px 14px;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mf-tab.mf-active {
+  background: #0f172a;
+  color: #f87171;
+  font-weight: 700;
+}
+
+.mf-workspace.mf-hidden {
+  display: none;
+}
+
+.mf-render-panel {
+  padding: 16px;
+  background: #1e293b;
+  border-radius: 8px;
+  min-width: 420px;
+}
+
+.mf-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.mf-select {
+  flex: 1;
+}
+
+.mf-status {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+}

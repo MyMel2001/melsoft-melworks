@@ -10,7 +10,7 @@
     <div class="ml-brand">MelLite</div>
     <div class="ml-actions">
       <button class="ml-btn" id="ml-btn-open" onclick="triggerOpen()">Open Image...</button>
-      <button class="ml-btn" id="ml-btn-export" onclick="exportPng()">Export PNG</button>
+      <button class="ml-btn" id="ml-btn-export" onclick="exportStandardImage()">Export Image</button>
     </div>
   </header>
 
@@ -44,6 +44,14 @@
     <button class="ml-btn" id="ml-btn-reset" onclick="resetAdjustments()">Reset Adjustments</button>
     <div class="ml-status" id="ml-status">MelLite | No image open</div>
   </aside>
+
+  <label class="ml-slider-row">Export Format
+    <select id="ml-export-format" class="ml-select">
+      <option value="png">PNG</option>
+      <option value="jpeg">JPEG</option>
+      <option value="webp">WEBP</option>
+    </select>
+  </label>
 
   <input type="file" id="ml-file-input" accept="image/*" style="display:none" onchange="handleImageFile(event)">
 

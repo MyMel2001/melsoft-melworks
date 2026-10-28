@@ -3,7 +3,9 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const zlib = require('zlib');
 const { MelFfmpeg, runFfmpeg } = require('./src/ffmpeg');
+const { MelFilmBundle } = require('./src/bundle');
 
 async function runTests() {
   console.log('Testing MelFilm FFMPEG engine...');
@@ -34,6 +36,22 @@ async function runTests() {
   const renderRes = await MelFfmpeg.exportVideo({ inputPath: srcPath, outputPath: outPath, resolution: '128x72', format: 'mp4', fps: 30 });
   assert(fs.existsSync(outPath) && fs.statSync(outPath).size > 0, 'FFMPEG export produced output');
   console.log('✓ MelFilm FFMPEG export validated');
+
+  // 5. Test MelFilm project bundle save/load (ZIP of .aepx / .prproj)
+  const { MelFilmBundle } = require('./src/bundle');
+  const aepxXml = '<?xml version="1.0"?><Project><Composition name="Comp1"/></Project>';
+  const aepxBuf = await MelFilmBundle.saveAepx('MyFilm', aepxXml);
+  const aepxZip = await MelFilmBundle.loadBundle(aepxBuf);
+  assert.strictEqual(aepxZip.files['project.aepx'], aepxXml, 'MelFilm AEPX bundle roundtrips project XML');
+  assert.ok(aepxZip.files['manifest.json'].includes('aepx'), 'MelFilm AEPX bundle has manifest');
+
+  const prprojXml = '<?xml version="1.0"?><Project><Sequence name="Seq1"/></Project>';
+  const prprojBuf = await MelFilmBundle.savePrproj('MyFilm', prprojXml);
+  const prprojZip = await MelFilmBundle.loadBundle(prprojBuf);
+  const prprojGzipped = Buffer.from(prprojZip.files['project.prproj'], 'base64');
+  const prprojDecompressed = zlib.gunzipSync(prprojGzipped).toString('utf8');
+  assert.strictEqual(prprojDecompressed, prprojXml, 'MelFilm PRPROJ bundle gzip roundtrips project XML');
+  console.log('✓ MelFilm project bundle engine validated');
 
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }

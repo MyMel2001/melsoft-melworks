@@ -107,19 +107,24 @@ function triggerOpen() {
   document.getElementById('ml-file-input').click();
 }
 
-function exportPng() {
+function exportStandardImage() {
   if (!currentImage) { alert('Open an image first.'); return; }
+  const format = (document.getElementById('ml-export-format') || {}).value || 'png';
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = currentImage.width;
   exportCanvas.height = currentImage.height;
   const exportCtx = exportCanvas.getContext('2d');
+  if (format === 'jpeg') {
+    exportCtx.fillStyle = '#ffffff';
+    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+  }
   exportCtx.putImageData(new ImageData(currentImage.data, currentImage.width, currentImage.height), 0, 0);
   exportCanvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'mel-lite-export.png';
+    a.download = 'mel-lite-export.' + format;
     a.click();
     URL.revokeObjectURL(url);
-  }, 'image/png');
+  }, 'image/' + format, format === 'jpeg' ? 0.92 : undefined);
 }
