@@ -333,8 +333,26 @@ class XlsxSpreadsheet {
 
   static async fromBuffer(buffer) {
     const opc = await OPCContainer.load(buffer);
-    const sheet1Xml = await opc.getFile('xl/worksheets/sheet1.xml');
-    if (!sheet1Xml) throw new Error('Invalid XLSX: missing xl/worksheets/sheet1.xml');
+    // Resolve the first worksheet through xl/workbook.xml + its relationships
+    let sheetPath = 'xl/worksheets/sheet1.xml';
+    let sheetName = 'Sheet1';
+    const wbXml = await opc.getFile('xl/workbook.xml');
+    if (wbXml) {
+      const sheetMatch = wbXml.match(/<sheet[^>]*r:id="([^"]+)"/);
+      const nameMatch = wbXml.match(/<sheet[^>]*name="([^"]+)"/);
+      if (nameMatch) sheetName = nameMatch[1];
+      if (sheetMatch) {
+        const relsXml = await opc.getFile('xl/_rels/workbook.xml.rels');
+        const relMatch = relsXml && relsXml.match(new RegExp(`<Relationship[^>]*Id="${sheetMatch[1]}"[^>]*Target="([^"]*)"`, 'i'));
+        if (relMatch) {
+          let target = relMatch[1];
+          if (target.startsWith('/')) target = target.slice(1);
+          sheetPath = `xl/${target.replace(/^xl\//, '').replace(/^\//, '')}`;
+        }
+      }
+    }
+    const sheet1Xml = await opc.getFile(sheetPath);
+    if (!sheet1Xml) throw new Error('Invalid XLSX: missing ' + sheetPath);
 
     const sstXml = await opc.getFile('xl/sharedStrings.xml');
     const sharedStrings = [];
@@ -373,7 +391,7 @@ class XlsxSpreadsheet {
       cells[coord] = { value, formula };
     }
 
-    return new XlsxSpreadsheet({ cells });
+    return new XlsxSpreadsheet({ cells, sheetName });
   }
 }
 

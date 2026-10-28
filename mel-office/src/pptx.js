@@ -74,6 +74,10 @@ class PptxPresentation {
     xml += `    <p:spTree>\n`;
     xml += `      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>\n`;
     xml += `      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>\n`;
+    const slideBgHex = slide.background ? slide.background.replace('#', '') : 'FFFFFF';
+    xml += `      <p:bg>\n`;
+    xml += `        <p:bgPr><a:solidFill><a:srgbClr val="${slideBgHex}"/></a:solidFill><a:effectLst/></p:bgPr>\n`;
+    xml += `      </p:bg>\n`;
 
     // Title Shape
     xml += `      <p:sp>\n`;
@@ -291,13 +295,20 @@ class PptxPresentation {
           }
         }
 
+        const bgMatch = slideXml.match(/<p:bg>[\s\S]*?<\/p:bg>/);
+        let slideBackground = '#FFFFFF';
+        if (bgMatch) {
+          let fillMatch = slideXml.match(/<a:solidFill>[\s\S]*?<a:srgbClr val="([0-9A-Fa-f]+)"/);
+          if (fillMatch) slideBackground = '#' + fillMatch[1];
+        }
+
         slides.push({
           title: titleText.text,
           subtitle: subtitleText.text,
           titleSize: titleText.size,
           subtitleSize: subtitleText.size,
           titleBold: titleText.bold,
-          background,
+          background: slideBackground,
           textColor,
           elements,
           body: PptxPresentation.buildBodyHtml(elements)

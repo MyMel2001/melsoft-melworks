@@ -3,7 +3,7 @@ const DocxDocument = require('./docx');
 const XlsxSpreadsheet = require('./xlsx');
 const PptxPresentation = require('./pptx');
 
-let currentApp = 'word'; // 'word', 'excel', 'ppt'
+let currentApp = 'word'; // 'word', 'excel', 'ppt', 'pdf'
 let currentRibbonTab = 'home';
 
 // --- MelWord State ---
@@ -44,6 +44,9 @@ let pptSlides = [
 let currentSlideIndex = 0;
 let slideShowIndex = 0;
 
+// --- MelPDF State ---
+let currentPdfFile = { name: 'Untitled.pdf', dataUrl: '' };
+
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
   initExcelGrid();
@@ -74,11 +77,14 @@ function switchApp(app) {
   titlebar.className = 'titlebar';
   if (app === 'excel') titlebar.classList.add('excel-theme');
   if (app === 'ppt') titlebar.classList.add('ppt-theme');
+  if (app === 'pdf') titlebar.classList.remove('excel-theme');
+  if (app === 'pdf') titlebar.classList.remove('ppt-theme');
 
   const appMeta = {
     word: { icon: 'D', text: 'MelDocs - Document1' },
     excel: { icon: 'X', text: 'MelXL - Book1' },
-    ppt: { icon: 'S', text: 'MelSlideshows - Presentation1' }
+    ppt: { icon: 'S', text: 'MelSlideshows - Presentation1' },
+    pdf: { icon: 'P', text: 'MelPDF - Document.pdf' }
   };
 
   brandIcon.textContent = appMeta[app].icon;
@@ -88,6 +94,7 @@ function switchApp(app) {
   document.getElementById('word-workspace').style.display = (app === 'word') ? 'flex' : 'none';
   document.getElementById('excel-container').style.display = (app === 'excel') ? 'flex' : 'none';
   document.getElementById('ppt-container').style.display = (app === 'ppt') ? 'flex' : 'none';
+  document.getElementById('pdf-container').style.display = (app === 'pdf') ? 'flex' : 'none';
 
   // Ribbon tabs visibility
   document.getElementById('tab-formulas').style.display = (app === 'excel') ? 'block' : 'none';
@@ -947,6 +954,8 @@ function updateStatus() {
     statusLeft.textContent = `MelXL 365 | Active Sheet: ${currentSheetName} | Auto-calc ON`;
   } else if (currentApp === 'ppt') {
     statusLeft.textContent = `MelSlideshows 365 | Slide ${currentSlideIndex + 1} of ${pptSlides.length}`;
+  } else if (currentApp === 'pdf') {
+    statusLeft.textContent = 'MelPDF 365 | Ready';
   }
 }
 
@@ -969,6 +978,28 @@ function newDocument() {
 
 function triggerOpen() {
   document.getElementById('file-input').click();
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [meta, b64] = dataUrl.split(',');
+  const mime = (meta && meta.match(/data:(.*?);/) ? meta.match(/data:(.*?);/)[1] : 'application/pdf');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function openPdfFile(file) {
+  switchApp('pdf');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    currentPdfFile = { name: file.name, dataUrl };
+    const viewer = document.getElementById('pdf-viewer');
+    if (viewer) viewer.src = dataUrl;
+    updateStatus();
+  };
+  reader.readAsDataURL(file);
 }
 
 async function handleFileOpen(event) {
@@ -998,8 +1029,9 @@ async function handleFileOpen(event) {
       try {
         const sheet = await XlsxSpreadsheet.fromBuffer(data);
         // Overwrite excelSheets with loaded cells
-        excelSheets = { 'Sheet1': sheet.cells };
+        excelSheets = { [sheet.sheetName]: sheet.cells };
         recalcExcelGrid(); // Refresh UI
+        switchSheet(sheet.sheetName);
         alert(`Loaded Excel spreadsheet "${file.name}" with ${Object.keys(sheet.cells).length} cells.`);
       } catch (err) {
         alert('Failed to parse XLSX: ' + err.message);
@@ -1016,6 +1048,8 @@ async function handleFileOpen(event) {
       } catch (err) {
         alert('Failed to parse PPTX: ' + err.message);
       }
+    } else if (file.name.toLowerCase().endsWith('.pdf')) {
+      openPdfFile(file);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -1026,7 +1060,13 @@ function saveDocument() {
 }
 
 async function exportNativeFile() {
-  if (currentApp === 'word') {
+  if (currentApp === 'pdf') {
+    if (currentPdfFile && currentPdfFile.dataUrl) {
+      const blob = dataUrlToBlob(currentPdfFile.dataUrl);
+      downloadBlob(blob, currentPdfFile.name);
+    }
+    return;
+  } else if (currentApp === 'word') {
     const docx = new DocxDocument({
       title: document.title || 'MelDocs Document',
       artBorder: currentWordBorder || null,

@@ -3,6 +3,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { PsdDocument, PackBits } = require('./src/psd');
+const Filters = require('./src/filters');
 
 async function runTests() {
   console.log('Testing MelDraw PSD binary and PackBits engines...');
@@ -100,6 +101,25 @@ async function runTests() {
   assert.strictEqual(l0G, 64, 'Layer 0 Green matches');
   assert.strictEqual(l0B, 175, 'Layer 0 Blue matches');
   console.log('✓ PSD parser and layer roundtrip validated');
+
+  // 4. Test Curves adjustment engine
+  const identityData = new Uint8ClampedArray([0, 0, 0, 255, 128, 128, 128, 255, 255, 255, 255, 255]);
+  const identityResult = Filters.applyCurves({ width: 3, height: 1, data: identityData }, { points: [{ input: 0, output: 0 }, { input: 255, output: 255 }] });
+  assert.strictEqual(identityResult.data[0], 0, 'Curves identity: black stays black');
+  assert.strictEqual(identityResult.data[3], 255, 'Curves identity: alpha preserved');
+  assert.strictEqual(identityResult.data[4], 128, 'Curves identity: mid gray stays mid gray');
+  assert.strictEqual(identityResult.data[11], 255, 'Curves identity: white stays white');
+
+  const brightened = Filters.applyCurves({ width: 3, height: 1, data: new Uint8ClampedArray([0, 0, 0, 255, 128, 128, 128, 255, 255, 255, 255, 255]) }, { points: [{ input: 0, output: 0 }, { input: 128, output: 255 }, { input: 255, output: 255 }] });
+  assert.strictEqual(brightened.data[4], 255, 'Curves: input 128 maps to output 255');
+  assert.strictEqual(brightened.data[7], 255, 'Curves: second pixel channels mapped');
+
+  const channelData = new Uint8ClampedArray([10, 20, 30, 255, 40, 50, 60, 255]);
+  const redOnly = Filters.applyCurves({ width: 2, height: 1, data: channelData }, { points: [{ input: 0, output: 0 }, { input: 255, output: 255 }] }, 'r');
+  assert.strictEqual(redOnly.data[0], 10, 'Curves channel R: identity keeps red');
+  assert.strictEqual(redOnly.data[1], 20, 'Curves channel R: green untouched');
+  assert.strictEqual(redOnly.data[2], 30, 'Curves channel R: blue untouched');
+  console.log('✓ MelDraw Curves adjustment engine validated');
 
   // Save sample PSD
   fs.mkdirSync(path.join(__dirname, 'samples'), { recursive: true });

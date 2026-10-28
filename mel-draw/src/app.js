@@ -35,6 +35,8 @@ let pickTarget = 'fg';
 let activeSelection = null; // { x, y, width, height }
 let selectionStart = null;
 let marchOffset = 0;
+let marqueeMoved = false; // true once marquee drag actually moved
+let lastCanvasPos = { x: 0, y: 0 }; // last known canvas coords (for click-subject selection)
 
 // Free Transform State
 let isTransforming = false;
@@ -44,6 +46,14 @@ let transformBackupCanvas = null;
 
 // Modal State
 let currentAdjustType = null;
+
+// Curves Adjustment State
+let currentCurveChannel = 'rgb';
+let currentCurvePoints = [
+  { input: 0, output: 0 },
+  { input: 128, output: 128 },
+  { input: 255, output: 255 }
+];
 
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
@@ -183,10 +193,56 @@ function setupCanvasEvents() {
 function getCanvasCoords(e) {
   const mainCanvas = document.getElementById('canvas-main');
   const rect = mainCanvas.getBoundingClientRect();
-  return {
+  const pos = {
     x: Math.round((e.clientX - rect.left) * (docWidth / rect.width)),
     y: Math.round((e.clientY - rect.top) * (docHeight / rect.height))
   };
+  lastCanvasPos = pos;
+  return pos;
+}
+
+// Click on a subject (no drag) with the marquee tool: auto-select the subject under the cursor
+function selectSubjectAt(x, y) {
+  const curLayer = layers[activeLayerIndex];
+  if (!curLayer || !curLayer.visible) return;
+
+  const ctx = curLayer.ctx;
+  const imgData = ctx.getImageData(0, 0, docWidth, docHeight);
+  const data = imgData.data;
+  const seedIdx = (y * docWidth + x) * 4;
+  const tR = data[seedIdx];
+  const tG = data[seedIdx + 1];
+  const tB = data[seedIdx + 2];
+
+  const visited = new Uint8Array(docWidth * docHeight);
+  const queue = [[x, y]];
+  visited[y * docWidth + x] = 1;
+  let minX = x, maxX = x, minY = y, maxY = y;
+
+  while (queue.length > 0) {
+    const [cx, cy] = queue.pop();
+    if (cx < minX) minX = cx;
+    if (cx > maxX) maxX = cx;
+    if (cy < minY) minY = cy;
+    if (cy > maxY) maxY = cy;
+
+    const neighbors = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+    for (const [nx, ny] of neighbors) {
+      if (nx < 0 || nx >= docWidth || ny < 0 || ny >= docHeight) continue;
+      const nPos = ny * docWidth + nx;
+      if (visited[nPos]) continue;
+      const nIdx = nPos * 4;
+      const dist = Math.abs(data[nIdx] - tR) + Math.abs(data[nIdx + 1] - tG) + Math.abs(data[nIdx + 2] - tB);
+      if (dist <= tolerance) {
+        visited[nPos] = 1;
+        queue.push([nx, ny]);
+      }
+    }
+  }
+
+  activeSelection = { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  renderOverlay();
+  updateStatus();
 }
 
 function handleMouseDown(e) {
@@ -211,6 +267,7 @@ function handleMouseDown(e) {
   }
 
   if (currentTool === 'marquee') {
+    marqueeMoved = false;
     selectionStart = { x: pos.x, y: pos.y };
     activeSelection = null;
     return;
@@ -250,6 +307,7 @@ function handleMouseMove(e) {
   const ctx = curLayer.ctx;
 
   if (currentTool === 'marquee' && selectionStart) {
+    marqueeMoved = true;
     const x = Math.min(selectionStart.x, pos.x);
     const y = Math.min(selectionStart.y, pos.y);
     const w = Math.abs(pos.x - selectionStart.x);
@@ -301,8 +359,13 @@ function handleMouseUp(e) {
   if (isTransforming) return;
 
   if (currentTool === 'marquee') {
-    // Finalize selection: keep activeSelection for apply operations (move/delete/copy)
-    compositeCanvas();
+    if (marqueeMoved) {
+      // Finalize dragged selection
+      compositeCanvas();
+    } else {
+      // Plain click with marquee tool: auto-select subject under cursor
+      selectSubjectAt(lastCanvasPos.x, lastCanvasPos.y);
+    }
     return;
   }
 
@@ -347,7 +410,7 @@ function handleMouseUp(e) {
 
 function applyWithClip(ctx, fn) {
   ctx.save();
-  if (activeSelection && activeSelection.width > 2 && activeSelection.height > 2) {
+  if (activeSelection && activeSelection.width > 0 && activeSelection.height > 0) {
     ctx.beginPath();
     ctx.rect(activeSelection.x, activeSelection.y, activeSelection.width, activeSelection.height);
     ctx.clip();
@@ -408,7 +471,7 @@ function renderOverlay() {
 
   if (isTransforming && transformBox) {
     renderTransformHandles(ctx);
-  } else if (activeSelection && activeSelection.width > 2 && activeSelection.height > 2) {
+  } else if (activeSelection && activeSelection.width > 0 && activeSelection.height > 0) {
     // Marching ants dashed box
     ctx.save();
     ctx.strokeStyle = '#000000';
@@ -701,7 +764,99 @@ function openAdjustDialog(type) {
       <div style="display:flex; justify-content:space-between;"><label>Hue:</label><input type="range" id="adj-hue" min="-180" max="180" value="0"></div>
       <div style="display:flex; justify-content:space-between;"><label>Saturation:</label><input type="range" id="adj-sat" min="-100" max="100" value="0"></div>
     `;
+  } else if (type === 'curves') {
+    title.textContent = 'Curves';
+    body.innerHTML = `
+      <div style="display:flex; align-items:center; gap:6px;">
+        <label>Channel:</label>
+        <select class="opt-select" id="adj-curve-channel" onchange="renderCurveEditor()">
+          <option value="rgb">RGB Composite</option>
+          <option value="r">Red</option>
+          <option value="g">Green</option>
+          <option value="b">Blue</option>
+        </select>
+      </div>
+      <div id="curves-points-container" style="display:flex; flex-direction:column; gap:6px;">
+        <!-- Rendered dynamically -->
+      </div>
+      <button class="btn-ps-mini" onclick="addCurvePoint()">+ Add Curve Point</button>
+    `;
+    renderCurveEditor();
   }
+}
+
+function renderCurveEditor() {
+  const container = document.getElementById('curves-points-container');
+  if (!container) return;
+  container.innerHTML = '';
+  currentCurvePoints.forEach((p, idx) => {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '6px';
+
+    const inLabel = document.createElement('label');
+    inLabel.textContent = `P${idx + 1} in`;
+    inLabel.style.fontSize = '10px';
+    inLabel.style.width = '34px';
+    row.appendChild(inLabel);
+
+    const inInput = document.createElement('input');
+    inInput.type = 'number';
+    inInput.min = '0';
+    inInput.max = '255';
+    inInput.value = p.input;
+    inInput.style.width = '48px';
+    inInput.addEventListener('input', () => {
+      currentCurvePoints[idx].input = parseInt(inInput.value, 10) || 0;
+    });
+    row.appendChild(inInput);
+
+    const outLabel = document.createElement('label');
+    outLabel.textContent = 'out';
+    outLabel.style.fontSize = '10px';
+    outLabel.style.width = '30px';
+    row.appendChild(outLabel);
+
+    const outInput = document.createElement('input');
+    outInput.type = 'number';
+    outInput.min = '0';
+    outInput.max = '255';
+    outInput.value = p.output;
+    outInput.style.width = '48px';
+    outInput.addEventListener('input', () => {
+      currentCurvePoints[idx].output = parseInt(outInput.value, 10) || 0;
+    });
+    row.appendChild(outInput);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-ps-mini';
+    delBtn.textContent = '✕';
+    delBtn.style.padding = '0 6px';
+    delBtn.addEventListener('click', () => removeCurvePoint(idx));
+    row.appendChild(delBtn);
+
+    container.appendChild(row);
+  });
+}
+
+function addCurvePoint() {
+  const last = currentCurvePoints[currentCurvePoints.length - 1];
+  currentCurvePoints.push({ input: Math.min(254, last.input + 1), output: Math.min(254, last.output + 1) });
+  renderCurveEditor();
+}
+
+function removeCurvePoint(idx) {
+  if (currentCurvePoints.length <= 2) return; // keep at least endpoints
+  currentCurvePoints.splice(idx, 1);
+  renderCurveEditor();
+}
+
+function readCurvePoints() {
+  const pts = currentCurvePoints
+    .map(p => ({ input: Math.max(0, Math.min(255, parseInt(p.input, 10) || 0)), output: Math.max(0, Math.min(255, parseInt(p.output, 10) || 0)) }))
+    .sort((a, b) => a.input - b.input);
+  return pts;
 }
 
 function applyAdjustmentModal() {
@@ -720,6 +875,14 @@ function applyAdjustmentModal() {
     curLayer.ctx.putImageData(imgData, 0, 0);
     compositeCanvas();
     pushHistory('Brightness/Contrast');
+  } else if (curLayer && currentAdjustType === 'curves') {
+    const points = readCurvePoints();
+    const channel = document.getElementById('adj-curve-channel').value;
+    const imgData = curLayer.ctx.getImageData(0, 0, docWidth, docHeight);
+    Filters.applyCurves(imgData, { points }, channel);
+    curLayer.ctx.putImageData(imgData, 0, 0);
+    compositeCanvas();
+    pushHistory('Curves');
   }
   closeAdjustmentModal();
 }

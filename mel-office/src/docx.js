@@ -246,7 +246,41 @@ class DocxDocument {
       }
     }
 
-    const doc = new DocxDocument({ paragraphs });
+    // Tables (w:tbl / w:tr / w:tc) -> structured tables for round-tripping
+    const tables = [];
+    const tblRegex = /<w:tbl>([\s\S]*?)<\/w:tbl>/g;
+    let tblMatch;
+    while ((tblMatch = tblRegex.exec(docXml)) !== null) {
+      const tblBody = tblMatch[1];
+      const rows = [];
+      const trRegex = /<w:tr>([\s\S]*?)<\/w:tr>/g;
+      let trMatch;
+      while ((trMatch = trRegex.exec(tblBody)) !== null) {
+        const trBody = trMatch[1];
+        const cells = [];
+        const tcRegex = /<w:tc>([\s\S]*?)<\/w:tc>/g;
+        let tcMatch;
+        while ((tcMatch = tcRegex.exec(trBody)) !== null) {
+          const tcBody = tcMatch[1];
+          let cellText = '';
+          const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+          let tMatch;
+          while ((tMatch = tRegex.exec(tcBody)) !== null) {
+            cellText += tMatch[1]
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&apos;/g, "'");
+          }
+          cells.push({ text: cellText });
+        }
+        if (cells.length > 0) rows.push({ cells });
+      }
+      if (rows.length > 0) tables.push({ rows });
+    }
+
+    const doc = new DocxDocument({ paragraphs, tables });
     // Only surface a title when the document actually declares one (e.g. Title style paragraph)
     const titlePara = paragraphs.find(p => p.style === 'Title');
     doc.title = (titlePara && titlePara.runs && titlePara.runs[0] && titlePara.runs[0].text) ? titlePara.runs[0].text : '';

@@ -39,6 +39,29 @@ async function runTests() {
   assert.strictEqual(parsedDoc.paragraphs[0].runs[0].text, 'MelOffice Suite Architecture', 'Parsed DOCX heading matches');
   console.log('✓ MelWord DOCX export & import validated');
 
+  // 1b. Test MelWord DOCX table parsing & roundtrip
+  const sampleDocWithTable = new DocxDocument({
+    title: 'Table Test',
+    paragraphs: [
+      { style: 'Normal', runs: [{ text: 'Before table', size: 24 }] }
+    ],
+    tables: [
+      {
+        rows: [
+          { cells: [{ text: 'Feature' }, { text: 'Status' }] },
+          { cells: [{ text: 'Curves' }, { text: 'Supported' }] }
+        ]
+      }
+    ]
+  });
+  const tableDocxBuf = await sampleDocWithTable.exportBuffer();
+  const parsedTableDoc = await DocxDocument.fromBuffer(tableDocxBuf);
+  assert.strictEqual(parsedTableDoc.tables.length, 1, 'Parsed DOCX has 1 table');
+  assert.strictEqual(parsedTableDoc.tables[0].rows.length, 2, 'Parsed DOCX table has 2 rows');
+  assert.strictEqual(parsedTableDoc.tables[0].rows[0].cells[0].text, 'Feature', 'Parsed DOCX table cell text matches');
+  assert.strictEqual(parsedTableDoc.tables[0].rows[1].cells[1].text, 'Supported', 'Parsed DOCX table second row second cell matches');
+  console.log('✓ MelWord DOCX table parsing & roundtrip validated');
+
   // 2. Test MelExcel XLSX Export, Formulas & Import
   const sampleSheet = new XlsxSpreadsheet({
     cells: {
@@ -68,6 +91,17 @@ async function runTests() {
   assert.strictEqual(parsedSheet.cells['B2'].value, 50, 'Parsed XLSX numeric value matches');
   console.log('✓ MelExcel XLSX export & calc engine validated');
 
+  // 2b. Test XLSX workbook-driven sheet resolution
+  const customSheet = new XlsxSpreadsheet({
+    sheetName: 'Revenue',
+    cells: { 'A1': { value: 'Quarter' }, 'B1': { value: 'Revenue' } }
+  });
+  const customSheetBuf = await customSheet.exportBuffer();
+  const parsedCustomSheet = await XlsxSpreadsheet.fromBuffer(customSheetBuf);
+  assert.strictEqual(parsedCustomSheet.sheetName, 'Revenue', 'Parsed XLSX sheet name matches workbook');
+  assert.strictEqual(parsedCustomSheet.cells['A1'].value, 'Quarter', 'Parsed XLSX first-sheet cells via workbook rels match');
+  console.log('✓ MelExcel XLSX workbook sheet resolution validated');
+
   // 3. Test MelPowerPoint PPTX Export & Import
   const sampleDeck = new PptxPresentation({
     slides: [
@@ -92,6 +126,18 @@ async function runTests() {
   assert.strictEqual(parsedDeck.slides.length, 2, 'Parsed PPTX has 2 slides');
   assert.strictEqual(parsedDeck.slides[0].title, 'MelOffice 2026', 'Parsed PPTX title matches');
   console.log('✓ MelPowerPoint PPTX export & import validated');
+
+  // 3b. Test PPTX slide background parsing & roundtrip
+  const bgDeck = new PptxPresentation({
+    slides: [
+      { title: 'Background Test', subtitle: '', background: '#FF0000', elements: [] }
+    ]
+  });
+  const bgPptxBuf = await bgDeck.exportBuffer();
+  const parsedBgDeck = await PptxPresentation.fromBuffer(bgPptxBuf);
+  assert.strictEqual(parsedBgDeck.slides.length, 1, 'Parsed PPTX background deck has 1 slide');
+  assert.strictEqual(parsedBgDeck.slides[0].background, '#FF0000', 'Parsed PPTX slide background matches export');
+  console.log('✓ MelPowerPoint PPTX background parsing validated');
 
   // Save sample files
   fs.mkdirSync(path.join(__dirname, 'samples'), { recursive: true });

@@ -127,7 +127,52 @@ class FilterEngine {
       v, v, v
     ]);
   }
+
+  // Curves adjustment: piecewise-linear mapping through control points [{input, output}]
+  // channel: 'rgb' (composite), 'r', 'g' or 'b' (single channel remap). Identity when no/1 point.
+  static applyCurves(imageData, curves = {}, channel = 'rgb') {
+    const data = imageData.data;
+    const raw = (curves && Array.isArray(curves.points) && curves.points.length >= 2)
+      ? curves.points
+      : [{ input: 0, output: 0 }, { input: 255, output: 255 }];
+    const pts = raw
+      .map(p => ({ input: Math.max(0, Math.min(255, Number(p.input) || 0)), output: Math.max(0, Math.min(255, Number(p.output) || 0)) }))
+      .sort((a, b) => a.input - b.input);
+
+    const getY = (x) => {
+      const first = pts[0];
+      const last = pts[pts.length - 1];
+      if (x <= first.input) return first.output;
+      if (x >= last.input) return last.output;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        if (x <= b.input) {
+          const t = (x - a.input) / (b.input - a.input || 1);
+          return a.output + (b.output - a.output) * t;
+        }
+      }
+      return last.output;
+    };
+
+    const mapR = (channel === 'g' || channel === 'b') ? (v) => v : getY;
+    const mapG = (channel === 'r' || channel === 'b') ? (v) => v : getY;
+    const mapB = (channel === 'r' || channel === 'g') ? (v) => v : getY;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const srcR = data[i];
+      const srcG = data[i + 1];
+      const srcB = data[i + 2];
+      data[i] = Math.max(0, Math.min(255, mapR(srcR)));
+      data[i + 1] = Math.max(0, Math.min(255, mapG(srcG)));
+      data[i + 2] = Math.max(0, Math.min(255, mapB(srcB)));
+    }
+    return imageData;
+  }
 }
+
+// Browser global alias so app.js filter/adjust calls resolve in classic script scope
+const Filters = FilterEngine;
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = FilterEngine;

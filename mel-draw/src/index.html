@@ -23,9 +23,11 @@
     <div class="ps-menu-item" onclick="redo()">Redo (Ctrl+Y)</div>
     <div class="ps-menu-item" onclick="startFreeTransform()">Free Transform (Ctrl+T)</div>
     <div class="ps-menu-item" onclick="deselect()">Deselect (Ctrl+D)</div>
+    <div class="ps-menu-item" onclick="selectSubjectAt(lastCanvasPos.x, lastCanvasPos.y)">Select Subject (Click)</div>
     <!-- Image / Adjustments -->
     <div class="ps-menu-item" onclick="openAdjustDialog('brightness')">Brightness/Contrast...</div>
     <div class="ps-menu-item" onclick="openAdjustDialog('hsv')">Hue/Saturation...</div>
+    <div class="ps-menu-item" onclick="openAdjustDialog('curves')">Curves...</div>
     <div class="ps-menu-item" onclick="applyFilter('invert')">Invert (Ctrl+I)</div>
     <div class="ps-menu-item" onclick="applyFilter('grayscale')">Desaturate</div>
     <div class="ps-menu-item" onclick="applyFilter('threshold')">Threshold</div>
