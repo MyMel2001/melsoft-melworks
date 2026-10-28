@@ -122,6 +122,15 @@ function runTests() {
   const quietSeq2 = buildSequence(mixProject);
   assert.ok(Math.abs(quietSeq2.events[0].volume - 0.5) < 1e-9, 'MelSound sequence carries track volume');
 
+  const swingProject = new MelSoundProject({ bpm: 140 });
+  const swingTrack = swingProject.addTrack('Lead');
+  swingProject.setStep(swingTrack.id, 1, 62);
+  const straightSeq = buildSequence(swingProject);
+  assert.ok(Math.abs(straightSeq.events[0].time - (1 * 60) / (140 * 4)) < 1e-9, 'MelSound swing neutral at zero');
+  swingProject.swing = 0.5;
+  const swungSeq = buildSequence(swingProject);
+  assert.ok(Math.abs(swungSeq.events[0].time - (1.5 * 60) / (140 * 4)) < 1e-9, 'MelSound swing delays offbeat steps');
+
   console.log('✓ MelSound audio sequence builder validated');
 
   console.log('\nALL MELSOUND TESTS PASSED SUCCESSFULLY!\n');

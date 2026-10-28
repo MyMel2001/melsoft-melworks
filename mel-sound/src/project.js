@@ -2,7 +2,7 @@
 class MelSoundProject {
   static trackSeq = 0;
   static patternSeq = 0;
-  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [], kind = 'instrumental', patterns = [], patternChain = [] } = {}) {
+  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [], kind = 'instrumental', patterns = [], patternChain = [], swing = 0 } = {}) {
     this.bpm = Math.max(1, Math.min(999, Math.round(Number(bpm) || 120)));
     this.masterGain = Math.max(0, Math.min(10, Number(masterGain) || 1));
     this.tracks = Array.isArray(tracks) ? tracks : [];
@@ -10,6 +10,7 @@ class MelSoundProject {
     this.kind = kind || 'instrumental';
     this.patterns = Array.isArray(patterns) ? patterns : [];
     this.patternChain = Array.isArray(patternChain) ? patternChain : [];
+    this.swing = Math.max(0, Math.min(1, Number(swing) || 0));
   }
 
   static create(kind, bpm) {
@@ -29,6 +30,7 @@ class MelSoundProject {
     project.meta = data.meta || { source: 'mel-sound' };
     project.patterns = Array.isArray(data.patterns) ? data.patterns : [];
     project.patternChain = Array.isArray(data.patternChain) ? data.patternChain : [];
+    project.swing = Math.max(0, Math.min(1, Number(data.swing) || 0));
     return project;
   }
 
@@ -41,6 +43,7 @@ class MelSoundProject {
       kind: this.kind,
       patterns: this.patterns,
       patternChain: this.patternChain,
+      swing: this.swing,
       meta: { source: 'mel-sound' }
     });
   }

@@ -6,6 +6,7 @@ function noteToFrequency(midi) {
 function buildSequence(project) {
   const bpm = (project && project.bpm) ? project.bpm : 120;
   const stepDuration = 60 / (bpm * 4); // 16 steps per bar
+  const swing = (project && project.swing) ? project.swing : 0;
   const events = [];
   const tracks = (project && project.tracks) || [];
   for (const track of tracks) {
@@ -14,7 +15,8 @@ function buildSequence(project) {
     for (let s = 0; s < 16; s++) {
       const note = steps[s];
       if (!note) continue;
-      events.push({ trackId: track.id, step: s, time: s * stepDuration, duration: stepDuration * 0.9, midi: note, volume: track.volume === undefined ? 1 : track.volume });
+      const shiftedStep = s + (s % 2 === 1 ? swing : 0);
+      events.push({ trackId: track.id, step: s, time: shiftedStep * stepDuration, duration: stepDuration * 0.9, midi: note, volume: track.volume === undefined ? 1 : track.volume });
     }
   }
   let lastEnd = 0;
