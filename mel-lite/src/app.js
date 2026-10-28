@@ -1,5 +1,6 @@
 // MelLite Studio Client Application Engine
 const { MelLiteFilterEngine } = require('./filters');
+const { MelRawImportEngine } = require('./raw');
 
 let currentImage = null; // { width, height, data }
 let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
@@ -101,6 +102,19 @@ function updateWhiteBalance() {
 
 function updateStatus() {
   document.getElementById('ml-status').textContent = currentImage ? 'MelLite | ' + currentImage.width + 'x' + currentImage.height : 'MelLite | No image open';
+}
+
+async function importRawDng(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const raw = MelRawImportEngine.parseDng(buf);
+  const rgba = MelRawImportEngine.toRGBA(raw);
+  currentImage = { width: rgba.width, height: rgba.height, data: rgba.data };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
+  updateSliders();
+  renderImage();
+  updateStatus();
 }
 
 function triggerOpen() {

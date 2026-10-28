@@ -64,6 +64,28 @@ async function runTests() {
   assert.strictEqual(comp.layers.length, 1, 'MelFilm comp layer removal updates stack');
   console.log('✓ MelFilm composition engine validated');
 
+  // 7. Test MelFilm FFMPEG crossfade (xfade between two inputs)
+  const leftPath = path.join(os.tmpdir(), 'mel-film-left.mp4');
+  const rightPath = path.join(os.tmpdir(), 'mel-film-right.mp4');
+  const xfadePath = path.join(os.tmpdir(), 'mel-film-xfade.mp4');
+  await runFfmpeg([
+    '-y', '-f', 'lavfi', '-i', 'color=c=red:size=320x240:rate=10:duration=1',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', leftPath
+  ]);
+  await runFfmpeg([
+    '-y', '-f', 'lavfi', '-i', 'color=c=blue:size=320x240:rate=10:duration=1',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', rightPath
+  ]);
+  const xfadeRes = await MelFfmpeg.crossfade({ inputs: [{ inputPath: leftPath }, { inputPath: rightPath }], outputPath: xfadePath, transition: 'fade', duration: 0.5 });
+  assert(fs.existsSync(xfadePath) && fs.statSync(xfadePath).size > 0, 'FFMPEG crossfade produced output');
+  console.log('✓ MelFilm FFMPEG crossfade validated');
+
+  let crossfadeErr = false;
+  try {
+    await MelFfmpeg.crossfade({ inputs: [{ inputPath: leftPath }], outputPath: xfadePath, transition: 'fade', duration: 0.5 });
+  } catch (e) { crossfadeErr = true; }
+  assert.ok(crossfadeErr, 'MelFilm crossfade rejects inputs count != 2');
+
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }
 

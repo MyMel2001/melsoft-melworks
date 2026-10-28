@@ -63,6 +63,17 @@ class MelFfmpeg {
     const args = ['-y', '-i', inputPath, '-ss', String(timeSeconds), '-frames:v', '1', '-q:v', '2', outputPath];
     return await runFfmpeg(args);
   }
+
+  static async crossfade({ inputs, outputPath, transition = 'fade', duration = 1 }) {
+    if (!Array.isArray(inputs) || inputs.length !== 2) throw new Error('crossfade requires exactly 2 inputs');
+    const filter = '[i0:v][i1:v]xfade=transition=' + transition + ':duration=' + duration + ':offset=0[e0]';
+    const args = ['-y'];
+    args.push('-i', inputs[0].inputPath);
+    args.push('-i', inputs[1].inputPath);
+    args.push('-filter_complex', filter);
+    args.push('-map', '[e0]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', outputPath);
+    return await runFfmpeg(args);
+  }
 }
 
 module.exports = { MelFfmpeg, runFfmpeg, runFfprobe };

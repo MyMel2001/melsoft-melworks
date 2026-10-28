@@ -11,6 +11,7 @@
     <div class="ml-actions">
       <button class="ml-btn" id="ml-btn-open" onclick="triggerOpen()">Open Image...</button>
       <button class="ml-btn" id="ml-btn-export" onclick="exportStandardImage()">Export Image</button>
+      <button class="ml-btn" id="ml-btn-import-raw" onclick="document.getElementById('ml-raw-input').click()">Import RAW</button>
     </div>
   </header>
 
@@ -54,6 +55,8 @@
   </label>
 
   <input type="file" id="ml-file-input" accept="image/*" style="display:none" onchange="handleImageFile(event)">
+
+  <input type="file" id="ml-raw-input" accept=".dng,image/dng" style="display:none" onchange="importRawDng(event)">
 
   <script src="app.js"></script>
 </body>
