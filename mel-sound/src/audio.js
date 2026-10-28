@@ -3,25 +3,43 @@ function noteToFrequency(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+function collectPatternEvents(pattern, tracks, stepDuration, swing) {
+  const events = [];
+  const patternSteps = pattern ? (pattern.steps || {}) : {};
+  for (const track of tracks) {
+    if (track.mute) continue;
+    const steps = pattern ? (patternSteps[track.id] || new Array(16).fill(0)) : (track.steps || new Array(16).fill(0));
+    for (let s = 0; s < 16; s++) {
+      const note = steps[s];
+      if (!note) continue;
+      const shiftedStep = s + (s % 2 === 1 ? swing : 0);
+      events.push({ trackId: track.id, patternId: pattern ? pattern.id : null, step: s, shiftedStep, time: shiftedStep * stepDuration, duration: stepDuration * 0.9, midi: note, volume: track.volume === undefined ? 1 : track.volume });
+    }
+  }
+  return events;
+}
+
 function buildSequence(project) {
   const bpm = (project && project.bpm) ? project.bpm : 120;
   const stepDuration = 60 / (bpm * 4); // 16 steps per bar
   const swing = (project && project.swing) ? project.swing : 0;
   const events = [];
   const tracks = (project && project.tracks) || [];
-  for (const track of tracks) {
-    if (track.mute) continue;
-    const steps = track.steps || new Array(16).fill(0);
-    for (let s = 0; s < 16; s++) {
-      const note = steps[s];
-      if (!note) continue;
-      const shiftedStep = s + (s % 2 === 1 ? swing : 0);
-      events.push({ trackId: track.id, step: s, time: shiftedStep * stepDuration, duration: stepDuration * 0.9, midi: note, volume: track.volume === undefined ? 1 : track.volume });
+  const patterns = (project && project.patterns) || [];
+  const chain = (project && project.patternChain) || [];
+  const passes = chain.length > 0 ? chain.map((id) => patterns.find((p) => p.id === id) || null) : [null];
+  let cursor = 0; // song timeline position in steps
+  for (const pattern of passes) {
+    const patEvents = collectPatternEvents(pattern, tracks, stepDuration, swing);
+    for (const e of patEvents) {
+      e.time = (cursor + e.shiftedStep) * stepDuration;
+      events.push(e);
     }
+    cursor += 16;
   }
   let lastEnd = 0;
   for (const e of events) lastEnd = Math.max(lastEnd, e.time + e.duration);
-  return { events, stepDuration, bpm, duration: lastEnd };
+  return { events, stepDuration, bpm, duration: Math.max(lastEnd, cursor * stepDuration), patternCount: passes.length, patterns: passes.filter(Boolean) };
 }
 
 class MelSoundPlayer {

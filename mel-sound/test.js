@@ -136,6 +136,31 @@ function runTests() {
 
   console.log('✓ MelSound audio sequence builder validated');
 
+  // 4b. Test MelSound song assembly from pattern chain (FL Studio playlist)
+  const songProject = new MelSoundProject({ bpm: 140 });
+  const bassTrack = songProject.addTrack('Bassline');
+  const leadTrack = songProject.addTrack('Lead');
+  const verse = songProject.addPattern('Verse');
+  const chorus = songProject.addPattern('Chorus');
+  assert.strictEqual(songProject.addPatternToChain(verse.id), true, 'MelSound addPatternToChain appends');
+  assert.strictEqual(songProject.addPatternToChain(chorus.id), true, 'MelSound addPatternToChain appends second');
+  songProject.setStepOnPattern(verse.id, bassTrack.id, 0, 40);
+  songProject.setStepOnPattern(verse.id, bassTrack.id, 4, 43);
+  songProject.setStepOnPattern(chorus.id, bassTrack.id, 0, 47);
+  songProject.setStepOnPattern(chorus.id, leadTrack.id, 8, 62);
+  const songSeq = buildSequence(songProject);
+  assert.strictEqual(songSeq.patternCount, 2, 'MelSound song sequence counts chain patterns');
+  assert.strictEqual(songSeq.events.length, 4, 'MelSound song sequence gathers chain events');
+  assert.ok(Math.abs(songSeq.events[0].time - (0 * 60) / (140 * 4)) < 1e-9, 'MelSound song event time pattern 1 starts at zero');
+  assert.ok(Math.abs(songSeq.events[1].time - (4 * 60) / (140 * 4)) < 1e-9, 'MelSound song event time pattern 1 step 4');
+  assert.ok(Math.abs(songSeq.events[2].time - (16 * 60) / (140 * 4)) < 1e-9, 'MelSound song event time pattern 2 offset by one bar');
+  assert.ok(Math.abs(songSeq.events[3].time - (24 * 60) / (140 * 4)) < 1e-9, 'MelSound song event time pattern 2 step 8');
+
+  const emptySong = new MelSoundProject({ bpm: 140 });
+  assert.strictEqual(buildSequence(emptySong).patternCount, 1, 'MelSound sequence single pass without chain');
+
+  console.log('✓ MelSound song assembly from pattern chain validated');
+
   // 5. Test MelSound WAV export (16-bit PCM render of the sequence)
   const { renderSequenceWav, saveWav } = require('./src/wav');
   const wavBuf = renderSequenceWav(mixProject, 44100);
