@@ -68,12 +68,18 @@ class MelFfmpeg {
   static async crossfade({ inputs, outputPath, transition = 'fade', duration = 1 }) {
     if (!Array.isArray(inputs) || inputs.length !== 2) throw new Error('crossfade requires exactly 2 inputs');
     const tr = getTransition(transition);
-    const filter = '[i0:v][i1:v]xfade=transition=' + tr.filter + ':duration=' + duration + ':offset=0[e0]';
+    const filter = '[i0:v][i1:v]xfade=transition=' + tr.filter + ':duration=' + duration + ':offset=0[e0];[i0:a][i1:a]amix=inputs=2:duration=first:dropout_transition=2[e1]';
     const args = ['-y'];
     args.push('-i', inputs[0].inputPath);
     args.push('-i', inputs[1].inputPath);
     args.push('-filter_complex', filter);
-    args.push('-map', '[e0]', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', outputPath);
+    args.push('-map', '[e0]');
+    args.push('-map', '[e1]');
+    args.push('-c:v', 'libx264');
+    args.push('-pix_fmt', 'yuv420p');
+    args.push('-c:a', 'aac');
+    args.push('-b:a', '128k');
+    args.push(outputPath);
     return await runFfmpeg(args);
   }
 }

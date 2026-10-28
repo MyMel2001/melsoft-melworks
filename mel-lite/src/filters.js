@@ -80,6 +80,17 @@ class MelLiteFilterEngine {
     if (adjustments.curves) {
       out = FilterEngine.applyCurves(out, adjustments.curves, 'rgb');
     }
+    if (adjustments.local) {
+      out = MelLiteFilterEngine.applyLocalAdjustments(out, adjustments.local, {
+        exposure: adjustments.exposure,
+        contrast: adjustments.contrast,
+        brightness: adjustments.brightness,
+        saturation: adjustments.saturation,
+        whiteBalance: adjustments.whiteBalance,
+        curves: adjustments.curves,
+        sharpen: adjustments.sharpen
+      });
+    }
     if (adjustments.crop) {
       out = MelLiteFilterEngine.applyCrop(out, adjustments.crop);
     }
@@ -152,6 +163,43 @@ class MelLiteFilterEngine {
       }
     }
     return { width: outW, height: outH, data: out };
+  }
+
+  // Local adjustments: apply development ops within a region only; outside keeps original.
+  static applyLocalAdjustments(imageData, region = { x: 0, y: 0, width: imageData.width, height: imageData.height }, adjustments = {}) {
+    const crop = { x: Math.round(region.x) || 0, y: Math.round(region.y) || 0, width: Math.round(region.width) || imageData.width, height: Math.round(region.height) || imageData.height };
+    const local = MelLiteFilterEngine.applyCrop(imageData, crop);
+    const adjusted = MelLiteFilterEngine.apply(local, {
+      exposure: adjustments.exposure,
+      contrast: adjustments.contrast,
+      brightness: adjustments.brightness,
+      saturation: adjustments.saturation,
+      whiteBalance: adjustments.whiteBalance,
+      curves: adjustments.curves,
+      sharpen: adjustments.sharpen
+    });
+    const out = new Uint8ClampedArray(imageData.data.length);
+    const ow = imageData.width;
+    const oh = imageData.height;
+    for (let y = 0; y < oh; y++) {
+      for (let x = 0; x < ow; x++) {
+        const di = (y * ow + x) * 4;
+        const inRegion = x >= crop.x && x < crop.x + crop.width && y >= crop.y && y < crop.y + crop.height;
+        if (!inRegion) {
+          out[di] = imageData.data[di];
+          out[di + 1] = imageData.data[di + 1];
+          out[di + 2] = imageData.data[di + 2];
+          out[di + 3] = imageData.data[di + 3];
+        } else {
+          const li = (((y - crop.y) * crop.width) + (x - crop.x)) * 4;
+          out[di] = adjusted.data[li];
+          out[di + 1] = adjusted.data[li + 1];
+          out[di + 2] = adjusted.data[li + 2];
+          out[di + 3] = adjusted.data[li + 3];
+        }
+      }
+    }
+    return { width: imageData.width, height: imageData.height, data: out };
   }
 
   // Red-eye reduction: neutralize lifted blue channel in eyes (simple channel swap fix).

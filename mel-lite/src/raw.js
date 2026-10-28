@@ -1,6 +1,6 @@
 // MelLite RAW Import Engine - reads uncompressed baseline DNG/TIFF image data.
 // TIFF-family layout: byte order, magic 42, IFD0 offset, IFD entries, strip pixel data.
-// Supported subset: Compression=1 (none), BitsPerSample=16, SamplesPerPixel=3.
+// Supported subset: Compression=1 (none), BitsPerSample 8 or 16, SamplesPerPixel=3.
 class MelRawImportEngine {
   static parseTiff(bytes) {
     const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -44,7 +44,7 @@ class MelRawImportEngine {
     const rowsPerStrip = rowsEntry ? rowsEntry.value : height;
 
     if (compression !== 1) throw new Error('RAW compression not supported: ' + compression);
-    if (bitsPerSample !== 16) throw new Error('RAW bit depth not supported: ' + bitsPerSample);
+    if (bitsPerSample !== 8 && bitsPerSample !== 16) throw new Error('RAW bit depth not supported: ' + bitsPerSample);
 
     const offsets = stripOffsetsEntry && stripOffsetsEntry.count > 1
       ? MelRawImportEngine.readI32Array(buf, stripOffsetsEntry.value, stripOffsetsEntry.count, little)
@@ -78,22 +78,24 @@ class MelRawImportEngine {
     return parsed;
   }
 
-  // Convert raw 16-bit strip data to 8-bit RGBA pixel array (scaled by 1/65535).
+  // Convert raw strip data (8 or 16 bit) to 8-bit RGBA pixel array.
   static toRGBA(raw) {
-    const { width, height, data, samplesPerPixel } = raw;
+    const { width, height, data, samplesPerPixel, bitsPerSample } = raw;
     const spp = samplesPerPixel || 3;
     const pixels = width * height;
     const out = new Uint8ClampedArray(pixels * 4);
+    const is16 = (bitsPerSample || 16) === 16;
+    const bytesPerSample = is16 ? 2 : 1;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const si = ((y * width + x) * spp) * 2;
-        const r = data[si] | (data[si + 1] << 8);
-        const g = data[si + 2] | (data[si + 3] << 8);
-        const b = data[si + 4] | (data[si + 5] << 8);
+        const si = ((y * width + x) * spp) * bytesPerSample;
+        const r = is16 ? (data[si] | (data[si + 1] << 8)) : data[si];
+        const g = is16 ? (data[si + 2] | (data[si + 3] << 8)) : data[si + 1];
+        const b = is16 ? (data[si + 4] | (data[si + 5] << 8)) : data[si + 2];
         const o = (y * width + x) * 4;
-        out[o] = Math.round((r * 255) / 65535);
-        out[o + 1] = Math.round((g * 255) / 65535);
-        out[o + 2] = Math.round((b * 255) / 65535);
+        out[o] = is16 ? Math.round((r * 255) / 65535) : Math.min(255, r);
+        out[o + 1] = is16 ? Math.round((g * 255) / 65535) : Math.min(255, g);
+        out[o + 2] = is16 ? Math.round((b * 255) / 65535) : Math.min(255, b);
         out[o + 3] = 255;
       }
     }

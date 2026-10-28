@@ -118,3 +118,20 @@ body {
 .ml-crop-row input {
   width: 56px;
 }
+
+.ml-brush-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.ml-brush-row input[type="range"] {
+  flex: 1;
+}
+
+.ml-brush-row span {
+  width: 44px;
+  text-align: right;
+}

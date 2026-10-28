@@ -78,10 +78,12 @@ async function runTests() {
   const xfadePath = path.join(os.tmpdir(), 'mel-film-xfade.mp4');
   await runFfmpeg([
     '-y', '-f', 'lavfi', '-i', 'color=c=red:size=320x240:rate=10:duration=1',
+    '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', leftPath
   ]);
   await runFfmpeg([
     '-y', '-f', 'lavfi', '-i', 'color=c=blue:size=320x240:rate=10:duration=1',
+    '-f', 'lavfi', '-i', 'sine=frequency=550:duration=1',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', rightPath
   ]);
   const xfadeRes = await MelFfmpeg.crossfade({ inputs: [{ inputPath: leftPath }, { inputPath: rightPath }], outputPath: xfadePath, transition: 'fade', duration: 0.5 });

@@ -4,9 +4,11 @@ const { MelRawImportEngine } = require('./raw');
 
 let currentImage = null; // { width, height, data }
 let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0 };
+let brush = { x: 0, y: 0, size: 20 };
 
 const canvas = document.getElementById('ml-canvas');
 const ctx = canvas.getContext('2d');
+canvas.addEventListener('click', canvasClick);
 
 function resizeCanvas() {
   const maxW = 1600;
@@ -49,7 +51,7 @@ function handleImageFile(event) {
       const offCtx = off.getContext('2d');
       offCtx.drawImage(img, 0, 0);
       currentImage = { width: w, height: h, data: offCtx.getImageData(0, 0, w, h).data };
-      adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
+      adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
       updateSliders();
       renderImage();
       updateStatus();
@@ -71,8 +73,26 @@ function applyAdjustments() {
 }
 
 function resetAdjustments() {
-  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0 };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
   updateSliders();
+}
+
+function canvasClick(e) {
+  if (!currentImage) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) * (currentImage.width / Math.max(1, rect.width)));
+  const y = Math.round((e.clientY - rect.top) * (currentImage.height / Math.max(1, rect.height)));
+  brush = { x: Math.max(0, Math.min(currentImage.width - 1, x)), y: Math.max(0, Math.min(currentImage.height - 1, y)), size: brush.size || 20 };
+}
+
+function updateBrushSize(val) { brush.size = parseInt(val, 10) || 20; document.getElementById('ml-brush-size-val').textContent = brush.size; }
+
+function applyLocalNow() {
+  if (!currentImage) { alert('Open an image first.'); return; }
+  const size = Math.max(1, Math.round(brush.size) || 20);
+  const half = Math.floor(size / 2);
+  adjustments = { ...adjustments, local: { x: Math.max(0, brush.x - half), y: Math.max(0, brush.y - half), width: size, height: size } };
+  applyAdjustments();
 }
 
 function applyCropNow() {
@@ -112,6 +132,7 @@ function updateSliders() {
   document.getElementById('ml-crop-h').value = crop.height;
   document.getElementById('ml-rotate').value = adjustments.rotate;
   document.getElementById('ml-sharpen').value = adjustments.sharpen;
+  document.getElementById('ml-brush-size').value = brush.size;
 }
 
 function updateCropX(val) { if (adjustments.crop) adjustments.crop.x = parseInt(val, 10) || 0; }

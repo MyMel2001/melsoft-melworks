@@ -109,6 +109,50 @@ function runTests() {
   assert.ok(rawErr, 'MelLite RAW reader rejects short files');
   console.log('✓ MelLite RAW import engine validated');
 
+  // 8. Test MelLite RAW import of uncompressed 8-bit baseline TIFF
+  const W8 = 2;
+  const H8 = 1;
+  const strip8 = new Uint8Array(W8 * H8 * 3);
+  strip8[0] = 100; strip8[1] = 150; strip8[2] = 200;
+  strip8[3] = 10; strip8[4] = 20; strip8[5] = 30;
+  const entries8 = [
+    { tag: 256, type: 4, count: 1, value: W8 },
+    { tag: 257, type: 4, count: 1, value: H8 },
+    { tag: 258, type: 3, count: 1, value: 8 },
+    { tag: 259, type: 3, count: 1, value: 1 },
+    { tag: 277, type: 3, count: 1, value: 3 },
+    { tag: 273, type: 4, count: 1, value: 122 },
+    { tag: 279, type: 4, count: 1, value: strip8.length }
+  ];
+  const dng8 = new Uint8Array(122 + strip8.length);
+  dng8[0] = 0x49; dng8[1] = 0x49; dng8[2] = 42; dng8[3] = 0;
+  dng8[4] = 8; dng8[5] = 0; dng8[6] = 0; dng8[7] = 0;
+  dng8[8] = 9; dng8[9] = 0;
+  let p8 = 10;
+  for (const e of entries8) {
+    dng8[p8] = e.tag & 0xff; dng8[p8 + 1] = Math.floor(e.tag / 256) & 0xff;
+    dng8[p8 + 2] = e.type & 0xff; dng8[p8 + 3] = Math.floor(e.type / 256) & 0xff;
+    dng8[p8 + 4] = e.count & 0xff; dng8[p8 + 5] = Math.floor(e.count / 256) & 0xff;
+    dng8[p8 + 6] = 0; dng8[p8 + 7] = 0;
+    dng8[p8 + 8] = e.value & 0xff; dng8[p8 + 9] = Math.floor(e.value / 256) & 0xff;
+    dng8[p8 + 10] = 0; dng8[p8 + 11] = 0;
+    p8 += 12;
+  }
+  dng8[118] = 0; dng8[119] = 0; dng8[120] = 0; dng8[121] = 0;
+  dng8.set(strip8, 122);
+  const raw8 = MelRawImportEngine.parseDng(dng8);
+  assert.strictEqual(raw8.width, W8, 'MelLite RAW 8-bit parse reads width');
+  assert.strictEqual(raw8.height, H8, 'MelLite RAW 8-bit parse reads height');
+  assert.strictEqual(raw8.bitsPerSample, 8, 'MelLite RAW 8-bit parse reads bit depth');
+  const rgba8 = MelRawImportEngine.toRGBA(raw8);
+  assert.strictEqual(rgba8.width, W8, 'MelLite RAW 8-bit toRGBA keeps width');
+  assert.strictEqual(rgba8.height, H8, 'MelLite RAW 8-bit toRGBA keeps height');
+  assert.strictEqual(rgba8.data.length, W8 * H8 * 4, 'MelLite RAW 8-bit toRGBA produces RGBA buffer');
+  assert.strictEqual(rgba8.data[0], 100, 'MelLite RAW 8-bit toRGBA passes red through');
+  assert.strictEqual(rgba8.data[1], 150, 'MelLite RAW 8-bit toRGBA passes green through');
+  assert.strictEqual(rgba8.data[2], 200, 'MelLite RAW 8-bit toRGBA passes blue through');
+  assert.strictEqual(rgba8.data[4], 10, 'MelLite RAW 8-bit toRGBA passes second pixel red');
+
   // 9. Test MelLite crop adjustment (region { x, y, width, height } pixels)
   const cropImg = { width: 4, height: 2, data: new Uint8ClampedArray(8 * 4) };
   for (let y = 0; y < 2; y++) {
@@ -183,6 +227,18 @@ function runTests() {
   const hlLow = MelLiteFilterEngine.applyHighlightRollOff({ width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) }, 250, 0.5);
   assert.strictEqual(hlLow.data[0], 100, 'MelLite highlight roll-off leaves low values alone');
   console.log('✓ MelLite highlight roll-off validated');
+
+  // 16. Test MelLite local adjustments (brush region applies ops, outside keeps original)
+  const localImg = { width: 3, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255, 100, 100, 100, 255, 100, 100, 100, 255]) };
+  const localOut = MelLiteFilterEngine.applyLocalAdjustments(localImg, { x: 1, y: 0, width: 1, height: 1 }, { brightness: 10 });
+  assert.strictEqual(localOut.width, 3, 'MelLite local adjustments keep width');
+  assert.strictEqual(localOut.height, 1, 'MelLite local adjustments keep height');
+  assert.strictEqual(localOut.data[0], 100, 'MelLite local adjustments outside region unchanged');
+  assert.strictEqual(localOut.data[4], 110, 'MelLite local adjustments inside region shifted');
+  assert.strictEqual(localOut.data[8], 100, 'MelLite local adjustments outside region right unchanged');
+  const fullLocal = MelLiteFilterEngine.applyLocalAdjustments(localImg, { x: 0, y: 0, width: 3, height: 1 }, { brightness: 10 });
+  assert.strictEqual(fullLocal.data[0], 110, 'MelLite local adjustments full region applies op');
+  console.log('✓ MelLite local adjustments validated');
 
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
