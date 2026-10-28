@@ -52,6 +52,12 @@ window.addEventListener('DOMContentLoaded', () => {
   initWordRuler();
   handleWordInput();
   updateStatus();
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F5') {
+      e.preventDefault();
+      if (currentApp === 'ppt') startSlideShow();
+    }
+  });
 });
 
 // --- App Switching ---
@@ -98,7 +104,7 @@ function switchApp(app) {
   updateStatus();
 }
 
-function switchRibbonTab(tabName) {
+function switchRibbonTab(tabName, event) {
   currentRibbonTab = tabName;
   document.querySelectorAll('.ribbon-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.ribbon-content').forEach(c => c.style.display = 'none');
@@ -203,9 +209,17 @@ function insertTextBox() {
 
 function insertImagePrompt() {
   const url = prompt('Enter Image URL (or data URI):', 'https://via.placeholder.com/300x180.png?text=MelOffice+Image');
-  if (url) {
-    document.execCommand('insertImage', false, url);
+  if (!url) return;
+  if (currentApp === 'ppt') {
+    saveCurrentSlide();
+    const slide = pptSlides[currentSlideIndex];
+    if (slide) {
+      slide.body = `<img src="${url}" alt="Inserted image" style="max-width:100%; max-height:60vh; display:block; margin:8px auto;">`;
+      document.getElementById('slide-body').innerHTML = slide.body;
+    }
+    return;
   }
+  document.execCommand('insertImage', false, url);
 }
 
 function changePageMargins(type) {
@@ -776,7 +790,7 @@ function renderPptDeck() {
     thumb.className = `slide-thumb ${idx === currentSlideIndex ? 'active' : ''}`;
     thumb.innerHTML = `
       <span class="slide-thumb-num">${idx + 1}</span>
-      <strong style="max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${slide.title}</strong>
+      <strong style="max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${slide.title || ''}</strong>
       <div style="font-size:9px; margin-top:2px; opacity:0.7;">${slide.layout || 'Slide'}</div>
     `;
     thumb.onclick = () => selectSlide(idx);
@@ -887,9 +901,9 @@ function startSlideShow() {
 function renderSlideShowCurrent() {
   const slide = pptSlides[slideShowIndex];
   if (!slide) return;
-  document.getElementById('show-title').innerText = slide.title;
-  document.getElementById('show-subtitle').innerText = slide.subtitle;
-  document.getElementById('show-body').innerHTML = slide.body;
+  document.getElementById('show-title').innerText = slide.title || '';
+  document.getElementById('show-subtitle').innerText = slide.subtitle || '';
+  document.getElementById('show-body').innerHTML = slide.body || '';
   const showTitleEl = document.getElementById('show-title');
   if (showTitleEl && slide.titleSize) showTitleEl.style.fontSize = `${slide.titleSize}px`;
   const showSubtitleEl = document.getElementById('show-subtitle');

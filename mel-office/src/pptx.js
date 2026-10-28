@@ -11,7 +11,8 @@ class PptxPresentation {
         textColor: '#FFFFFF',
         elements: [
           { type: 'text', text: 'MelSoft Enterprise Solutions 2026', x: 100, y: 280, size: 24, color: '#38BDF8' }
-        ]
+        ],
+        body: '<p>• Full native support for PresentationML (pml.xsd)</p><p>• Dynamic multi-slide presentation manager</p><p>• Export directly to MelSlideshows .pptx files</p>'
       },
       {
         title: 'High Performance & Modularity',
@@ -21,7 +22,8 @@ class PptxPresentation {
         elements: [
           { type: 'text', text: '• Native Electron / Node.js Engine\n• 100% ECMA-376 Strict XML Compatibility\n• Fully Responsive Ribbon UI', x: 80, y: 150, size: 20, color: '#334155' },
           { type: 'shape', shape: 'rect', x: 500, y: 140, w: 200, h: 120, fill: '#0284C7' }
-        ]
+        ],
+        body: '<p>• Zero heavy runtime dependencies</p><p>• Native Open Packaging Conventions (OPC) packaging</p><p>• High-performance cross-platform support</p>'
       }
     ];
   }
@@ -34,6 +36,33 @@ class PptxPresentation {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
+  }
+
+  static uint8ToBase64(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  static buildBodyHtml(elements) {
+    const parts = [];
+    for (const el of elements || []) {
+      if (el.type === 'image') {
+        const mime = el.filename
+          ? (/\.png$/i.test(el.filename) ? 'image/png' : /\.jpe?g$/i.test(el.filename) ? 'image/jpeg' : 'image/gif')
+          : 'image/png';
+        const src = `data:${mime};base64,${PptxPresentation.uint8ToBase64(el.data)}`;
+        parts.push(`<img src="${src}" alt="${PptxPresentation.escapeXml(el.name || 'Image')}" style="max-width:${Math.max(10, el.w || 100)}px; max-height:60vh; display:block; margin:8px auto;">`);
+      } else if (el.type === 'text') {
+        const style = `font-size:${Math.round(el.size || 18)}px; font-weight:${el.bold ? 'bold' : 'normal'}; color:${el.color || '#334155'};`;
+        String(el.text || '').split('\n').forEach((line) => {
+          parts.push(`<p style="${style}">${PptxPresentation.escapeXml(line)}</p>`);
+        });
+      }
+    }
+    return parts.join('');
   }
 
   generateSlideXml(slide, index) {
@@ -235,14 +264,19 @@ class PptxPresentation {
             const text = runs.map(r => r.text).join('');
             if (!text) continue;
             const runFmt = runs[0];
-            elements.push({
-              type: 'text',
-              text,
-              x, y, w, h,
-              size: runFmt ? runFmt.size : 18,
-              bold: runFmt ? runFmt.bold : false,
-              color: runFmt ? runFmt.color : '#334155'
-            });
+            // Title / subtitle placeholder shapes are tracked via titleText/subtitleText, not body elements
+            const isTitleLike = phType === 'title';
+            const isSubtitleLike = phType === 'subTitle';
+            if (!isTitleLike && !isSubtitleLike) {
+              elements.push({
+                type: 'text',
+                text,
+                x, y, w, h,
+                size: runFmt ? runFmt.size : 18,
+                bold: runFmt ? runFmt.bold : false,
+                color: runFmt ? runFmt.color : '#334155'
+              });
+            }
             if (phType === 'title' && !titleText.text) {
               titleText.text = text;
               titleText.size = runFmt ? runFmt.size : 18;
@@ -265,14 +299,15 @@ class PptxPresentation {
           titleBold: titleText.bold,
           background,
           textColor,
-          elements
+          elements,
+          body: PptxPresentation.buildBodyHtml(elements)
         });
       }
       index++;
     }
 
     if (slides.length === 0) {
-      slides.push({ title: 'Imported Presentation', subtitle: '', elements: [] });
+      slides.push({ title: 'Imported Presentation', subtitle: '', elements: [], body: '' });
     }
 
     return new PptxPresentation({ slides });
