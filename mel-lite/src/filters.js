@@ -224,6 +224,21 @@ class MelLiteFilterEngine {
     }
     return imageData;
   }
+  // Highlight roll-off: compress highlights above threshold to protect highlight detail.
+  static applyHighlightRollOff(imageData, threshold = 250, rolloff = 0.5) {
+    const data = imageData.data;
+    const t = Math.max(0, threshold);
+    const r = Math.max(0, Math.min(1, rolloff));
+    for (let i = 0; i < data.length; i += 4) {
+      for (let c = 0; c < 3; c++) {
+        const v = data[i + c];
+        if (v > t) {
+          data[i + c] = Math.round(v - (v - t) * r);
+        }
+      }
+    }
+    return imageData;
+  }
 }
 
 module.exports = { MelLiteFilterEngine, FilterEngine };

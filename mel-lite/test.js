@@ -176,6 +176,14 @@ function runTests() {
   assert.strictEqual(noVig.data[0], 200, 'MelLite vignette neutral at zero strength');
   console.log('✓ MelLite vignette validated');
 
+  // 15. Test MelLite highlight roll-off (highlight compression)
+  const hlImg = { width: 1, height: 1, data: new Uint8ClampedArray([255, 200, 100, 255]) };
+  const hlOut = MelLiteFilterEngine.applyHighlightRollOff(hlImg, 250, 0.5);
+  assert.strictEqual(hlOut.data[0], 253, 'MelLite highlight roll-off compresses clipped highlights');
+  const hlLow = MelLiteFilterEngine.applyHighlightRollOff({ width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) }, 250, 0.5);
+  assert.strictEqual(hlLow.data[0], 100, 'MelLite highlight roll-off leaves low values alone');
+  console.log('✓ MelLite highlight roll-off validated');
+
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
 
