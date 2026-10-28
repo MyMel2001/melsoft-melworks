@@ -32,6 +32,29 @@ class MelFilmComp {
   getLayer(layerId) {
     return this.layers.find((l) => l.id === layerId) || null;
   }
+
+  toJSON() {
+    return {
+      name: this.name,
+      width: this.width,
+      height: this.height,
+      frameRate: this.frameRate,
+      frameCount: this.frameCount,
+      layers: this.layers.map((l) => ({ id: l.id, name: l.name, source: l.source }))
+    };
+  }
+
+  static fromJSON(json) {
+    const comp = new MelFilmComp({
+      name: json.name || 'Comp',
+      width: json.width || 1920,
+      height: json.height || 1080,
+      frameRate: json.frameRate || 24,
+      frameCount: json.frameCount || 0
+    });
+    comp.layers = Array.isArray(json.layers) ? json.layers.map((l) => ({ id: l.id, name: l.name, source: l.source })) : [];
+    return comp;
+  }
 }
 
 MelFilmComp.layerSeq = 0;

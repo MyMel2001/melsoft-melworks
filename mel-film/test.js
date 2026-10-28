@@ -62,6 +62,14 @@ async function runTests() {
   assert.strictEqual(comp.getLayer(layer1.id).name, 'Background', 'MelFilm comp reads layer by id');
   assert.strictEqual(comp.removeLayer(layer2.id), 1, 'MelFilm comp removes one layer');
   assert.strictEqual(comp.layers.length, 1, 'MelFilm comp layer removal updates stack');
+
+  const compJson = comp.toJSON();
+  assert.strictEqual(compJson.name, 'Main', 'MelFilm comp serializes name');
+  assert.strictEqual(compJson.layers.length, 1, 'MelFilm comp serializes layers');
+  const compBack = MelFilmComp.fromJSON(compJson);
+  assert.strictEqual(compBack.name, 'Main', 'MelFilm comp deserializes name');
+  assert.strictEqual(compBack.layers.length, 1, 'MelFilm comp deserializes layers');
+  assert.strictEqual(compBack.getLayer(comp.layers[0].id).name, 'Background', 'MelFilm comp JSON roundtrips layers');
   console.log('✓ MelFilm composition engine validated');
 
   // 7. Test MelFilm FFMPEG crossfade (xfade between two inputs)

@@ -2,13 +2,14 @@
 class MelSoundProject {
   static trackSeq = 0;
   static patternSeq = 0;
-  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [], kind = 'instrumental', patterns = [] } = {}) {
+  constructor({ bpm = 120, masterGain = 1, tracks = [], instruments = [], kind = 'instrumental', patterns = [], patternChain = [] } = {}) {
     this.bpm = Math.max(1, Math.min(999, Math.round(Number(bpm) || 120)));
     this.masterGain = Math.max(0, Math.min(10, Number(masterGain) || 1));
     this.tracks = Array.isArray(tracks) ? tracks : [];
     this.instruments = Array.isArray(instruments) ? instruments : [];
     this.kind = kind || 'instrumental';
     this.patterns = Array.isArray(patterns) ? patterns : [];
+    this.patternChain = Array.isArray(patternChain) ? patternChain : [];
   }
 
   static create(kind, bpm) {
@@ -27,6 +28,7 @@ class MelSoundProject {
     });
     project.meta = data.meta || { source: 'mel-sound' };
     project.patterns = Array.isArray(data.patterns) ? data.patterns : [];
+    project.patternChain = Array.isArray(data.patternChain) ? data.patternChain : [];
     return project;
   }
 
@@ -38,6 +40,7 @@ class MelSoundProject {
       instruments: this.instruments,
       kind: this.kind,
       patterns: this.patterns,
+      patternChain: this.patternChain,
       meta: { source: 'mel-sound' }
     });
   }
@@ -68,7 +71,9 @@ class MelSoundProject {
       name: name || ('Track ' + (this.tracks.length + 1)),
       kind: kind || 'instrumental',
       lyrics: '',
-      steps: new Array(16).fill(0)
+      steps: new Array(16).fill(0),
+      volume: 1,
+      mute: false
     };
     this.tracks.push(track);
     return track;
@@ -121,6 +126,20 @@ class MelSoundProject {
     return steps[idx] || 0;
   }
 
+  setTrackVolume(trackId, volume) {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (!track) return false;
+    track.volume = Math.max(0, Math.min(4, Number(volume) || 0));
+    return track.volume;
+  }
+
+  setTrackMute(trackId, mute) {
+    const track = this.tracks.find((t) => t.id === trackId);
+    if (!track) return false;
+    track.mute = !!mute;
+    return track.mute;
+  }
+
   addInstrument(name, type, pluginName, params) {
     const id = 'inst-' + Date.now();
     const instrument = {
@@ -161,6 +180,24 @@ class MelSoundProject {
   selectPattern(patternId) {
     const pattern = this.getPattern(patternId);
     return pattern ? pattern.id : null;
+  }
+
+  addPatternToChain(patternId) {
+    const pattern = this.getPattern(patternId);
+    if (!pattern) return false;
+    if (this.patternChain.indexOf(patternId) !== -1) return false;
+    this.patternChain.push(patternId);
+    return true;
+  }
+
+  removePatternFromChain(patternId) {
+    const before = this.patternChain.length;
+    this.patternChain = this.patternChain.filter((id) => id !== patternId);
+    return before - this.patternChain.length;
+  }
+
+  getPatternChain() {
+    return this.patternChain.slice();
   }
 }
 

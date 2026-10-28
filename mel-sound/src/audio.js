@@ -9,11 +9,12 @@ function buildSequence(project) {
   const events = [];
   const tracks = (project && project.tracks) || [];
   for (const track of tracks) {
+    if (track.mute) continue;
     const steps = track.steps || new Array(16).fill(0);
     for (let s = 0; s < 16; s++) {
       const note = steps[s];
       if (!note) continue;
-      events.push({ trackId: track.id, step: s, time: s * stepDuration, duration: stepDuration * 0.9, midi: note });
+      events.push({ trackId: track.id, step: s, time: s * stepDuration, duration: stepDuration * 0.9, midi: note, volume: track.volume === undefined ? 1 : track.volume });
     }
   }
   let lastEnd = 0;
@@ -50,8 +51,8 @@ class MelSoundPlayer {
       osc.type = 'triangle';
       osc.frequency.value = noteToFrequency(e.midi);
       gain.gain.setValueAtTime(0, now + e.time);
-      gain.gain.linearRampToValueAtTime(0.8, now + e.time + 0.01);
-      gain.gain.setValueAtTime(0.8, now + e.time + e.duration);
+      gain.gain.linearRampToValueAtTime(0.8 * (e.volume || 1), now + e.time + 0.01);
+      gain.gain.setValueAtTime(0.8 * (e.volume || 1), now + e.time + e.duration);
       gain.gain.linearRampToValueAtTime(0, now + e.time + e.duration);
       osc.connect(gain);
       gain.connect(this.masterGain);

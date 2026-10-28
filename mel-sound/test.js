@@ -63,6 +63,15 @@ function runTests() {
   assert.strictEqual(project.getPattern(keptPattern.id).name, 'Chorus', 'MelSound getPattern reads pattern');
   console.log('✓ MelSound pattern workflow validated');
 
+  // 2c. Test MelSound pattern chain (song arrangement sequencing)
+  const chainPattern = project.addPattern('Drop');
+  assert.strictEqual(project.addPatternToChain(chainPattern.id), true, 'MelSound addPatternToChain appends pattern');
+  assert.strictEqual(project.addPatternToChain(chainPattern.id), false, 'MelSound addPatternToChain rejects duplicate');
+  assert.deepStrictEqual(project.getPatternChain(), [chainPattern.id], 'MelSound pattern chain reads ordered ids');
+  assert.strictEqual(project.removePatternFromChain(chainPattern.id), 1, 'MelSound removePatternFromChain removes entry');
+  assert.deepStrictEqual(project.getPatternChain(), [], 'MelSound pattern chain updates after removal');
+  console.log('✓ MelSound pattern chain validated');
+
   // 3. Test MelSound FLP binary writer/reader roundtrip
   const { MelFlsWriter, MelFlsReader } = require('./src/flp');
   const writer = new MelFlsWriter();
@@ -93,6 +102,25 @@ function runTests() {
   assert.strictEqual(seq.events[0].midi, 60, 'MelSound sequence note midi preserved');
   assert.ok(Math.abs(seq.events[0].time - (4 * 60) / (140 * 4)) < 1e-9, 'MelSound sequence event time correct');
   assert.ok(seq.duration > 0, 'MelSound sequence duration positive');
+
+  const mixProject = new MelSoundProject({ bpm: 140 });
+  const mixTrack = mixProject.addTrack('Bassline');
+  mixProject.setStep(mixTrack.id, 0, 60);
+  const mixSeq = buildSequence(mixProject);
+  assert.strictEqual(mixSeq.events.length, 1, 'MelSound sequence builds note events');
+  assert.strictEqual(mixSeq.events[0].volume, 1, 'MelSound sequence defaults track volume to 1');
+
+  assert.strictEqual(mixProject.setTrackMute(mixTrack.id, true), true, 'MelSound setTrackMute stores mute');
+  const mutedSeq = buildSequence(mixProject);
+  assert.strictEqual(mutedSeq.events.length, 0, 'MelSound sequence skips muted tracks');
+
+  const quietVol = mixProject.setTrackVolume(mixTrack.id, 0.5);
+  assert.strictEqual(quietVol, 0.5, 'MelSound setTrackVolume stores volume');
+  const quietSeq = buildSequence(mixProject);
+  assert.strictEqual(quietSeq.events.length, 0, 'MelSound sequence still skips muted track after unmute check');
+  mixProject.setTrackMute(mixTrack.id, false);
+  const quietSeq2 = buildSequence(mixProject);
+  assert.ok(Math.abs(quietSeq2.events[0].volume - 0.5) < 1e-9, 'MelSound sequence carries track volume');
 
   console.log('✓ MelSound audio sequence builder validated');
 
