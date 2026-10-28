@@ -150,6 +150,32 @@ function runTests() {
   assert.strictEqual(sharpOut.data[0], 200, 'MelLite sharpen applies gain');
   console.log('✓ MelLite sharpen adjustment validated');
 
+  // 12. Test MelLite red-eye reduction (red dominance fix)
+  const eyeImg = { width: 1, height: 1, data: new Uint8ClampedArray([200, 90, 70, 255]) };
+  const eyeOut = MelLiteFilterEngine.applyRedEye(eyeImg);
+  assert.strictEqual(eyeOut.data[0], 90, 'MelLite red-eye reduction neutralizes red');
+  const clearEye = { width: 1, height: 1, data: new Uint8ClampedArray([60, 60, 60, 255]) };
+  const clearOut = MelLiteFilterEngine.applyRedEye(clearEye);
+  assert.strictEqual(clearOut.data[0], 60, 'MelLite red-eye reduction leaves neutral face alone');
+  console.log('✓ MelLite red-eye reduction validated');
+
+  // 13. Test MelLite film grain (amount-scaled noise)
+  const grainImg = { width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) };
+  const grainOut = MelLiteFilterEngine.applyGrain(grainImg, 0.5);
+  assert.ok(grainOut.data[0] !== 100, 'MelLite grain adds noise');
+  const noGrain = MelLiteFilterEngine.applyGrain({ width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) }, 0);
+  assert.strictEqual(noGrain.data[0], 100, 'MelLite grain neutral at zero amount');
+  console.log('✓ MelLite film grain validated');
+
+  // 14. Test MelLite vignette (edge darkening)
+  const vigImg = { width: 3, height: 3, data: new Uint8ClampedArray(9 * 4) };
+  for (let i = 0; i < vigImg.data.length; i += 4) { vigImg.data[i] = 200; vigImg.data[i + 1] = 200; vigImg.data[i + 2] = 200; vigImg.data[i + 3] = 255; }
+  const vigOut = MelLiteFilterEngine.applyVignette(vigImg, 0.5);
+  assert.ok(vigOut.data[0] < 200, 'MelLite vignette darkens edges');
+  const noVig = MelLiteFilterEngine.applyVignette({ width: 3, height: 3, data: (() => { const b = new Uint8ClampedArray(9 * 4); for (let i = 0; i < b.length; i += 4) { b[i] = 200; b[i+1] = 200; b[i+2] = 200; b[i+3] = 255; } return b; })() }, 0);
+  assert.strictEqual(noVig.data[0], 200, 'MelLite vignette neutral at zero strength');
+  console.log('✓ MelLite vignette validated');
+
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
 

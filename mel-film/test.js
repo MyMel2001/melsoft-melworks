@@ -101,6 +101,22 @@ async function runTests() {
   assert.ok(transitionErr, 'MelFilm crossfade rejects unknown transition');
   console.log('✓ MelFilm crossfade transition validation validated');
 
+  // 8. Test MelFilm project model (composition stack persistence)
+  const { MelFilmProject } = require('./src/project');
+  const mfProject = MelFilmProject.create('MyFilm');
+  const comp1 = MelFilmComp.create('Comp1');
+  comp1.width = 1920;
+  comp1.height = 1080;
+  comp1.addLayer('Background', 'bg.mp4');
+  mfProject.addComp(comp1);
+  const mfJson = mfProject.toJSON();
+  assert.strictEqual(mfJson.name, 'MyFilm', 'MelFilm project serializes name');
+  assert.strictEqual(mfJson.comps.length, 1, 'MelFilm project serializes comps');
+  const mfBack = MelFilmProject.fromJSON(mfJson);
+  assert.strictEqual(mfBack.comps.length, 1, 'MelFilm project JSON roundtrips comps');
+  assert.strictEqual(mfBack.getComp('Comp1').layers.length, 1, 'MelFilm project JSON roundtrips comp layers');
+  console.log('✓ MelFilm project model validated');
+
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }
 

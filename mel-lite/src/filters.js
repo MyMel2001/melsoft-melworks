@@ -154,6 +154,65 @@ class MelLiteFilterEngine {
     return { width: outW, height: outH, data: out };
   }
 
+  // Red-eye reduction: neutralize lifted blue channel in eyes (simple channel swap fix).
+  static applyRedEye(imageData) {
+    const data = imageData.data;
+    const w = imageData.width;
+    const h = imageData.height;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // Eye region heuristic: strong red dominance with low green/blue relative to red
+        if (r > 90 && r > (g + 25) && r > (b + 25)) {
+          data[i] = g;
+          data[i + 1] = g;
+          data[i + 2] = b;
+        }
+      }
+    }
+    return imageData;
+  }
+
+  // Film grain: add deterministic pseudo-random noise scaled by amount.
+  static applyGrain(imageData, amount = 0.02) {
+    const data = imageData.data;
+    const w = imageData.width;
+    const h = imageData.height;
+    const a = Math.max(0, Math.min(1, amount));
+    for (let i = 0; i < data.length; i += 4) {
+      const n = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+      const noise = (n - Math.floor(n) - 0.5) * 2 * 255 * a;
+      data[i] = Math.max(0, Math.min(255, data[i] + noise));
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+    }
+    return imageData;
+  }
+
+  // Vignette: darken edges, keep center neutral.
+  static applyVignette(imageData, strength = 0.3) {
+    const data = imageData.data;
+    const w = imageData.width;
+    const h = imageData.height;
+    const s = Math.max(0, Math.min(1, strength));
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const dx = x - (w - 1) / 2;
+        const dy = y - (h - 1) / 2;
+        const dist = Math.sqrt(dx * dx + dy * dy) / Math.max(w, h);
+        const f = 1 - s * dist * dist;
+        data[i] = Math.max(0, Math.min(255, data[i] * f));
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] * f));
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] * f));
+      }
+    }
+    return imageData;
+  }
+
   // Sharpen via unsharp-mask-like gain (amount 0 = neutral, >0 sharpens).
   static applySharpen(imageData, amount = 1) {
     const data = imageData.data;
