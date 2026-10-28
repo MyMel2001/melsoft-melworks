@@ -1,8 +1,10 @@
 // MelLite Automated Check Test
 const assert = require('assert');
+const os = require('os');
+const path = require('path');
 const { MelLiteFilterEngine, FilterEngine } = require('./src/filters');
 
-function runTests() {
+async function runTests() {
   console.log('Testing MelLite Photo Development engine...');
 
   // 1. Test MelLite exposure adjustment (1 stop = double brightness)
@@ -239,6 +241,23 @@ function runTests() {
   const fullLocal = MelLiteFilterEngine.applyLocalAdjustments(localImg, { x: 0, y: 0, width: 3, height: 1 }, { brightness: 10 });
   assert.strictEqual(fullLocal.data[0], 110, 'MelLite local adjustments full region applies op');
   console.log('✓ MelLite local adjustments validated');
+
+  // 17. Test MelLite FFMPEG backed decode to ImageData (ProRes RAW / FFMPEG-supported inputs)
+  const { MelLiteFfmpeg, runFfmpeg } = require('./src/ffmpeg');
+  const decSrc = path.join(os.tmpdir(), 'mel-lite-dec-src.mp4');
+  const decOut = path.join(os.tmpdir(), 'mel-lite-dec-out.mp4');
+  await runFfmpeg([
+    '-y', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=64x64:rate=10',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', decSrc
+  ]);
+  const decInfo = await MelLiteFfmpeg.probe(decSrc);
+  assert.ok(decInfo.width > 0 && decInfo.height > 0, 'MelLite FFMPEG probe reads decoded video dimensions');
+  const decImg = await MelLiteFfmpeg.decodeToImageData(decSrc);
+  assert.strictEqual(decImg.width, decInfo.width, 'MelLite FFMPEG decode keeps width');
+  assert.strictEqual(decImg.height, decInfo.height, 'MelLite FFMPEG decode keeps height');
+  assert.strictEqual(decImg.data.length, decInfo.width * decInfo.height * 4, 'MelLite FFMPEG decode produces RGBA buffer');
+  assert.strictEqual(decImg.data[3], 255, 'MelLite FFMPEG decode sets alpha opaque');
+  console.log('✓ MelLite FFMPEG decode bridge validated');
 
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
