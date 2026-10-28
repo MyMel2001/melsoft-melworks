@@ -1,6 +1,0 @@
-This is a folder containing unofficial filetype specs for:
-
-* Premiere Pro Projects
-* After Effects Projects (XML)
-
-This is made from research of publically available information.

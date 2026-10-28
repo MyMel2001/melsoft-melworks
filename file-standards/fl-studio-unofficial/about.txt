@@ -1,2 +1,0 @@
-This is an unofficial spec from public information for the leading
-music/sound creation/editing file formats.
