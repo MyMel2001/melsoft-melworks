@@ -74,6 +74,14 @@
     </div>
   </div>
 
+  <!-- Document Tabs -->
+  <div class="ps-doc-tabs-bar" id="ps-doc-tabs-bar">
+    <div class="ps-doc-tabs-list" id="ps-doc-tabs-list">
+      <!-- Rendered dynamically -->
+    </div>
+    <button class="btn-ps-mini" onclick="addDocument()" title="New Document">+</button>
+  </div>
+
   <!-- Workspace -->
   <div class="ps-workspace">
 
@@ -170,6 +178,8 @@
           <button class="btn-ps-mini" onclick="addNewLayer()" title="New Layer">+</button>
           <button class="btn-ps-mini" onclick="duplicateActiveLayer()" title="Duplicate Layer">⧉</button>
           <button class="btn-ps-mini" onclick="mergeDownLayer()" title="Merge Down">⤓</button>
+          <button class="btn-ps-mini" onclick="moveLayerBy(-1)" title="Move Layer Up">↑</button>
+          <button class="btn-ps-mini" onclick="moveLayerBy(1)" title="Move Layer Down">↓</button>
           <button class="btn-ps-mini" onclick="deleteActiveLayer()" title="Delete Layer">🗑</button>
         </div>
       </div>

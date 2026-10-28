@@ -1490,6 +1490,24 @@ function setupShortcuts() {
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
+    const toolShortcuts = {
+      v: 'select',
+      m: 'marquee',
+      a: 'subselect',
+      q: 'transform',
+      n: 'line',
+      y: 'pencil',
+      b: 'brush',
+      r: 'rect',
+      o: 'oval',
+      k: 'bucket',
+      e: 'eraser',
+      t: 'text',
+      i: 'eyedropper'
+    };
+    const lowerKey = (e.key || '').toLowerCase();
+    const matchedTool = toolShortcuts[lowerKey];
+
     if (e.key === 'F6') {
       e.preventDefault();
       insertKeyframe();
@@ -1505,10 +1523,9 @@ function setupShortcuts() {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       togglePlay();
-    } else if (e.key === 'q' || e.key === 'Q') {
-      setTool('transform');
-    } else if (e.key === 'v' || e.key === 'V') {
-      setTool('select');
+    } else if (matchedTool) {
+      e.preventDefault();
+      setTool(matchedTool);
     }
   });
 }

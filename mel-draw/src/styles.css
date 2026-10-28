@@ -68,6 +68,42 @@ body {
   background-color: #4b5563;
 }
 
+/* Document Tabs */
+.ps-doc-tabs-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--ps-panel-dark);
+  border-bottom: 1px solid var(--ps-border);
+  padding: 2px 8px;
+  gap: 6px;
+}
+
+.ps-doc-tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.ps-doc-tab {
+  padding: 3px 12px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--ps-text-dim);
+  background: transparent;
+}
+
+.ps-doc-tab:hover {
+  background-color: #444444;
+}
+
+.ps-doc-tab.active {
+  background-color: #0284c7;
+  color: white;
+}
+
 /* Options Bar */
 .ps-optionsbar {
   display: flex;

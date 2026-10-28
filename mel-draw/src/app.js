@@ -6,6 +6,10 @@ const { PsdDocument } = require('./psd');
 let docWidth = 800;
 let docHeight = 600;
 
+// Documents state (tab strip)
+let documents = [{ id: 'Untitled-1', name: 'Untitled-1' }];
+let activeDocId = 'Untitled-1';
+
 // Layers state
 let layers = [];
 let activeLayerIndex = 0;
@@ -48,10 +52,43 @@ window.addEventListener('DOMContentLoaded', () => {
   setupShortcuts();
   renderLayersList();
   renderHistory();
+  renderDocumentTabs();
   compositeCanvas();
   updateStatus();
   startMarchingAntsLoop();
 });
+
+// --- Document Tabs ---
+function renderDocumentTabs() {
+  const list = document.getElementById('ps-doc-tabs-list');
+  if (!list) return;
+  list.innerHTML = '';
+  documents.forEach((doc) => {
+    const tab = document.createElement('div');
+    tab.className = `ps-doc-tab ${doc.id === activeDocId ? 'active' : ''}`;
+    tab.textContent = doc.name;
+    tab.onclick = () => switchDocument(doc.id);
+    list.appendChild(tab);
+  });
+}
+
+function switchDocument(id) {
+  if (id === activeDocId) return;
+  activeDocId = id;
+  renderDocumentTabs();
+  setupInitialDocument();
+  renderLayersList();
+  renderHistory();
+  compositeCanvas();
+  updateStatus();
+}
+
+function addDocument() {
+  const id = `Untitled-${documents.length + 1}`;
+  documents.push({ id, name: id });
+  renderDocumentTabs();
+  switchDocument(id);
+}
 
 function setupInitialDocument() {
   const mainCanvas = document.getElementById('canvas-main');
@@ -60,6 +97,10 @@ function setupInitialDocument() {
   mainCanvas.height = docHeight;
   overlayCanvas.width = docWidth;
   overlayCanvas.height = docHeight;
+
+  // Reset history stack when (re)building the document
+  historyStack = [];
+  historyIndex = -1;
 
   // Layer 0: Background
   const bgCanvas = createLayerCanvas();
@@ -184,16 +225,7 @@ function handleMouseDown(e) {
   }
 
   if (currentTool === 'text') {
-    const text = prompt('Enter text for layer:', 'MelDraw Studio');
-    if (text) {
-      applyWithClip(ctx, () => {
-        ctx.fillStyle = fgColor;
-        ctx.font = `${brushSize * 2}px sans-serif`;
-        ctx.fillText(text, pos.x, pos.y);
-      });
-      compositeCanvas();
-      pushHistory('Text Tool');
-    }
+    startTextEditingAt(pos.x, pos.y);
     isPainting = false;
     return;
   }
@@ -571,6 +603,59 @@ function sampleColorAt(x, y) {
   setFgColor(hex);
 }
 
+// In-place text editing overlay for the Type (T) tool
+function startTextEditingAt(x, y) {
+  const canvas = document.getElementById('canvas-main');
+  const rect = canvas.getBoundingClientRect();
+  const overlay = document.createElement('textarea');
+  overlay.id = 'meldraw-text-editor';
+  overlay.value = '';
+  overlay.style.position = 'fixed';
+  overlay.style.left = `${rect.left + (x / docWidth) * rect.width}px`;
+  overlay.style.top = `${rect.top + (y / docHeight) * rect.height}px`;
+  overlay.style.font = `${brushSize * 2}px sans-serif`;
+  overlay.style.color = fgColor;
+  overlay.style.background = 'rgba(255, 255, 255, 0.92)';
+  overlay.style.border = '1px dashed #38bdf8';
+  overlay.style.padding = '2px 4px';
+  overlay.style.zIndex = '5000';
+  overlay.style.minWidth = '120px';
+  overlay.style.resize = 'none';
+  overlay.style.overflow = 'hidden';
+  document.body.appendChild(overlay);
+  overlay.focus();
+  overlay.select();
+
+  const commitText = () => {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    const text = (overlay.value || '').trim();
+    if (text) {
+      const layer = layers[activeLayerIndex];
+      if (layer) {
+        layer.ctx.save();
+        layer.ctx.font = `${brushSize * 2}px sans-serif`;
+        layer.ctx.fillStyle = fgColor;
+        layer.ctx.fillText(text, x, y);
+        layer.ctx.restore();
+        compositeCanvas();
+        pushHistory('Text Tool');
+      }
+    }
+  };
+
+  overlay.addEventListener('blur', commitText);
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      overlay.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      overlay.blur();
+    }
+  });
+}
+
+
 // --- Filters & Adjustments ---
 function applyFilter(filterName) {
   const curLayer = layers[activeLayerIndex];
@@ -906,7 +991,7 @@ function handleColorPick(e) {
 
 function setupShortcuts() {
   window.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
     if (e.key === 't' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
@@ -957,8 +1042,22 @@ function setupShortcuts() {
     } else if (e.key === 'd' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
       e.preventDefault();
       duplicateSelection();
+    } else if (e.key === 't' || e.key === 'T') {
+      setTool('text');
     }
   });
+}
+
+function moveLayerBy(delta) {
+  const target = activeLayerIndex + delta;
+  if (target < 0 || target >= layers.length || target === activeLayerIndex) return;
+  const cur = layers[activeLayerIndex];
+  layers.splice(activeLayerIndex, 1);
+  layers.splice(target, 0, cur);
+  activeLayerIndex = target;
+  renderLayersList();
+  compositeCanvas();
+  updateStatus();
 }
 
 function moveSelectionWithArrowKeys(key) {
@@ -1123,7 +1222,7 @@ async function handleFileOpen(e) {
 
   const fileName = file.name.toLowerCase();
   if (fileName.endsWith('.psd')) {
-    const buf = new Uint8Array(await file.arrayBuffer());
+    const buf = Buffer.from(new Uint8Array(await file.arrayBuffer()));
     loadPsdBuffer(buf);
   } else {
     const url = URL.createObjectURL(file);
