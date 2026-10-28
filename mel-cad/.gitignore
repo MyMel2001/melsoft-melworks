@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache
+.cache/
+
+# Test outputs
+coverage/
+
+# Electron
+*.asar
+
+# User files
+*.dwg
+*.dxf
+*.dwt
+*.psd
+*.fla
+*.swf
+*.docx
+*.xlsx
+*.pptx

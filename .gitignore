@@ -1,83 +1,56 @@
-# Development node_modules folder
-.DS_Store
-*.log
-tmp/
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+
+# IDE
 .vscode/
 .idea/
-.vs/
+*.sublime-*
+*.swp
+*.swo
 
-# OS-specific files
+# OS
 .DS_Store
 Thumbs.db
+*.log
 
-# Package manager files
-package-lock.json
-yarn.lock
-
-# IDE and editor files
-.vscode/settings.json
-.vscode/tasks.json
-.vscode/launch.json
+# Environment
+.env
+.env.local
+.env.*.local
 
 # Temporary files
 *.tmp
 *.temp
+tmp/
+temp/
 
-# Build outputs
-build/
-dist/
-*.min.js
-*.min.css
+# Package locks (optional - uncomment if you want to track)
+# package-lock.json
+# yarn.lock
 
-# Distribution folders
-distribution/
-dist/
+# Test outputs
+coverage/
+.nyc_output/
 
-# Node modules (should be .gitignore by default but double-check)
-node_modules/
-*.lock
+# Cache
+.cache/
+.parcel-cache/
 
-# IDE specific
-.vscode/
-.idea/
-*.swp
-*.swo
+# Electron
+*.asar
 
-# System files
-.DS_Store
-Thumbs.db
+# Project-specific
+*.psd
+*.psb
+*.ai
+*.sketch
 
-# Local environment
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Logs
-*.log
-*.log.*
-logs/
-
-# Runtime data
-pids/
-logs/
-.vscode/ossrvs*
-scratch
-
-# Built applications
-*.exe
-*.msi
+# Large binaries
 *.zip
 *.tar.gz
-
-# Documentation
-.DOCUMENTATION
-README.md
-CHANGELOG.md
-
-# Test files
-test/
-*.spec.js
-*.test.js
-coverage/
+*.rar
