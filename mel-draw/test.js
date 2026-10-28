@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { PsdDocument, PackBits } = require('./src/psd');
 const Filters = require('./src/filters');
+const { SubjectSegmenter } = require('./src/segment');
 
 async function runTests() {
   console.log('Testing MelDraw PSD binary and PackBits engines...');
@@ -120,6 +121,16 @@ async function runTests() {
   assert.strictEqual(redOnly.data[1], 20, 'Curves channel R: green untouched');
   assert.strictEqual(redOnly.data[2], 30, 'Curves channel R: blue untouched');
   console.log('✓ MelDraw Curves adjustment engine validated');
+
+  // 5. Test Subject Segmentation engine (flood fill + color range masks)
+  const segImg = { width: 4, height: 1, data: new Uint8ClampedArray([0, 0, 0, 255, 0, 0, 0, 255, 200, 30, 30, 255, 40, 40, 40, 255]) };
+  const flood = SubjectSegmenter.floodSelectMask(segImg, 0, 0, 5);
+  assert.deepStrictEqual(Array.from(flood.mask), [1, 1, 0, 0], 'Flood select: black run selected, red excluded');
+  assert.deepStrictEqual(flood.bounds, { x: 0, y: 0, width: 2, height: 1 }, 'Flood select: bounds correct');
+  const colorSel = SubjectSegmenter.colorSelectMask(segImg, 200, 30, 30, 25);
+  assert.deepStrictEqual(Array.from(colorSel.mask), [0, 0, 1, 0], 'Color select: red pixel selected, others excluded');
+  assert.deepStrictEqual(colorSel.bounds, { x: 2, y: 0, width: 1, height: 1 }, 'Color select: bounds correct');
+  console.log('✓ MelDraw Subject Segmentation engine validated');
 
   // Save sample PSD
   fs.mkdirSync(path.join(__dirname, 'samples'), { recursive: true });

@@ -1,0 +1,17 @@
+{
+  "name": "mel-film",
+  "version": "1.0.0",
+  "description": "MelFilm - Professional Video Editing Studio powered by FFMPEG",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0"
+  },
+  "allowScripts": {
+    "electron@45.1.0": true
+  }
+}

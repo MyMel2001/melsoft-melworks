@@ -2,6 +2,7 @@
 // Complete Adobe Photoshop Clone with Free Transform (Ctrl+T), Selection Marquee (M) Marching Ants, Multi-Layer Compositing, and PSD 8BPS Engine
 
 const { PsdDocument } = require('./psd');
+const { SubjectSegmenter } = require('./segment');
 
 let docWidth = 800;
 let docHeight = 600;
@@ -241,6 +242,28 @@ function selectSubjectAt(x, y) {
   }
 
   activeSelection = { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+  renderOverlay();
+  updateStatus();
+}
+
+// Auto-select subject by color range: uses current foreground color + tolerance to build a mask and select it.
+function autoSelectSubjectByColor() {
+  const curLayer = layers[activeLayerIndex];
+  if (!curLayer || !curLayer.visible) return;
+
+  const ctx = curLayer.ctx;
+  const imgData = ctx.getImageData(0, 0, docWidth, docHeight);
+  const hex = fgColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) || 0;
+  const g = parseInt(hex.substring(2, 4), 16) || 0;
+  const b = parseInt(hex.substring(4, 6), 16) || 0;
+
+  const { mask, bounds } = SubjectSegmenter.colorSelectMask(imgData, r, g, b, tolerance);
+  if (bounds.width <= 0 || bounds.height <= 0) {
+    deselect();
+    return;
+  }
+  activeSelection = bounds;
   renderOverlay();
   updateStatus();
 }

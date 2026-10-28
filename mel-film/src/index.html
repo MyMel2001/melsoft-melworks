@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MelFilm - Professional Video Editing Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="mf-header">
+    <div class="mf-brand">MelFilm</div>
+    <div class="mf-actions">
+      <button class="mf-btn" id="mf-btn-open" onclick="triggerOpen()">Open Video...</button>
+      <button class="mf-btn" id="mf-btn-export" onclick="exportVideo()">Export Render (MP4)</button>
+      <button class="mf-btn" id="mf-btn-poster" onclick="capturePoster()">Capture Poster</button>
+    </div>
+  </header>
+
+  <main class="mf-workspace">
+    <video id="mf-video" class="mf-video" controls style="max-width: 90%; max-height: 70vh;"></video>
+  </main>
+
+  <aside class="mf-panel">
+    <div class="mf-panel-title">Render</div>
+    <label class="mf-field">Resolution
+      <select id="mf-resolution" class="mf-select">
+        <option value="1920x1080">1920x1080 (Full HD)</option>
+        <option value="1280x720" selected>1280x720 (HD)</option>
+        <option value="854x480">854x480 (SD)</option>
+      </select>
+    </label>
+    <label class="mf-field">Format
+      <select id="mf-format" class="mf-select">
+        <option value="mp4" selected>MP4 (H.264)</option>
+        <option value="webm">WebM (VP9)</option>
+      </select>
+    </label>
+    <label class="mf-field">FPS
+      <input type="number" id="mf-fps" value="30" min="1" max="240">
+    </label>
+    <button class="mf-btn" id="mf-btn-apply" onclick="exportVideo()">Start Render</button>
+    <div class="mf-status" id="mf-status">MelFilm | No video open</div>
+  </aside>
+
+  <input type="file" id="mf-file-input" accept="video/*" style="display:none" onchange="handleVideoFile(event)">
+
+  <script src="app.js"></script>
+</body>
+</html>

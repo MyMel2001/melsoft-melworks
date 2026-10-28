@@ -26,6 +26,7 @@ function testToolsList() {
   const names = response.result.tools.map(t => t.name);
   assert.ok(names.includes('meloffice_evaluate_formula'), 'tools/list includes meloffice_evaluate_formula');
   assert.ok(names.includes('meldraw_apply_curves'), 'tools/list includes meldraw_apply_curves');
+  assert.ok(names.includes('meldraw_apply_filters'), 'tools/list includes meldraw_apply_filters');
   for (const tool of response.result.tools) {
     assert.ok(tool.inputSchema, `${tool.name} has an inputSchema`);
     assert.ok(Array.isArray(tool.inputSchema.required), `${tool.name} has required fields`);
@@ -52,6 +53,15 @@ function testToolCallCurves() {
   console.log('✓ MCP tools/call meldraw_apply_curves validated');
 }
 
+function testToolCallFilters() {
+  const response = handleRequest({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'meldraw_apply_filters', arguments: { filter: 'invert', pixels: [10, 20, 30, 255, 200, 100, 50, 255] } } });
+  const parsed = JSON.parse(response.result.content[0].text);
+  assert.strictEqual(parsed.tool, 'meldraw_apply_filters');
+  assert.deepStrictEqual(parsed.result.mapped, [245, 235, 225, 55, 155, 205], 'MCP filter invert applies correctly');
+  assert.strictEqual(response.result.isError, false);
+  console.log('✓ MCP tools/call meldraw_apply_filters validated');
+}
+
 function testUnknownToolAndMethod() {
   const unknownTool = callTool('no_such_tool', {});
   assert.strictEqual(unknownTool.isError, true, 'unknown MCP tool returns isError true');
@@ -67,6 +77,7 @@ function main() {
   testToolsList();
   testToolCallEvaluateFormula();
   testToolCallCurves();
+  testToolCallFilters();
   testUnknownToolAndMethod();
   console.log('\nALL MCP SERVER TESTS PASSED SUCCESSFULLY!\n');
 }

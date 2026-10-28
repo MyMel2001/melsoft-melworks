@@ -1,0 +1,17 @@
+{
+  "name": "mel-sound",
+  "version": "1.0.0",
+  "description": "MelSound - Professional Music Production Studio (FL Studio / DAW style)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0"
+  },
+  "allowScripts": {
+    "electron@45.1.0": true
+  }
+}

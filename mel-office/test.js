@@ -139,6 +139,19 @@ async function runTests() {
   assert.strictEqual(parsedBgDeck.slides[0].background, '#FF0000', 'Parsed PPTX slide background matches export');
   console.log('✓ MelPowerPoint PPTX background parsing validated');
 
+  // 4b. Test MelPDF PDF editing engine (pdf-lib backed)
+  const { MelPdfDocument } = require('./src/pdf');
+  const { PDFDocument, StandardFonts } = require('pdf-lib');
+  const pdfDoc = await MelPdfDocument.create({ pageSize: { width: 595.28, height: 841.89 } });
+  const pdfPage = pdfDoc.doc.getPage(0);
+  const pdfFont = await pdfDoc.doc.embedFont(StandardFonts.HelveticaBold);
+  await pdfPage.drawText('MelOffice PDF Overlay', { x: 72, y: 700, size: 24, font: pdfFont });
+  const pdfBytes = await pdfDoc.doc.save();
+  assert(pdfBytes[0] === 0x25 && pdfBytes[1] === 0x50, 'PDF output starts with %PDF header');
+  const reloadedPdf = await PDFDocument.load(pdfBytes);
+  assert.strictEqual(reloadedPdf.getPageCount(), 1, 'Reloaded PDF has 1 page');
+  console.log('✓ MelPDF PDF editing engine validated');
+
   // Save sample files
   fs.mkdirSync(path.join(__dirname, 'samples'), { recursive: true });
   fs.writeFileSync(path.join(__dirname, 'samples', 'sample.docx'), docxBuf);

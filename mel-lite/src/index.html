@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MelLite - Professional Photo Development Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="ml-header">
+    <div class="ml-brand">MelLite</div>
+    <div class="ml-actions">
+      <button class="ml-btn" id="ml-btn-open" onclick="triggerOpen()">Open Image...</button>
+      <button class="ml-btn" id="ml-btn-export" onclick="exportPng()">Export PNG</button>
+    </div>
+  </header>
+
+  <main class="ml-workspace">
+    <canvas id="ml-canvas" class="ml-canvas"></canvas>
+  </main>
+
+  <aside class="ml-panel">
+    <div class="ml-panel-title">Develop</div>
+    <label class="ml-slider-row">Exposure (EV)
+      <input type="range" id="ml-exp" min="-5" max="5" step="0.1" value="0" oninput="updateExposure(this.value)">
+      <span id="ml-exp-val">0.0</span>
+    </label>
+    <label class="ml-slider-row">Contrast
+      <input type="range" id="ml-contrast" min="0" max="100" value="0" oninput="updateContrast(this.value)">
+      <span id="ml-contrast-val">0</span>
+    </label>
+    <label class="ml-slider-row">Brightness
+      <input type="range" id="ml-brightness" min="-100" max="100" value="0" oninput="updateBrightness(this.value)">
+      <span id="ml-brightness-val">0</span>
+    </label>
+    <label class="ml-slider-row">Saturation
+      <input type="range" id="ml-saturation" min="0" max="200" value="100" oninput="updateSaturation(this.value)">
+      <span id="ml-saturation-val">100%</span>
+    </label>
+    <div class="ml-wb-row">White Balance
+      <label>R <input type="number" id="ml-wb-r" value="1.0" step="0.01" min="0.1" max="3" oninput="updateWhiteBalance()"></label>
+      <label>G <input type="number" id="ml-wb-g" value="1.0" step="0.01" min="0.1" max="3" oninput="updateWhiteBalance()"></label>
+      <label>B <input type="number" id="ml-wb-b" value="1.0" step="0.01" min="0.1" max="3" oninput="updateWhiteBalance()"></label>
+    </div>
+    <button class="ml-btn" id="ml-btn-reset" onclick="resetAdjustments()">Reset Adjustments</button>
+    <div class="ml-status" id="ml-status">MelLite | No image open</div>
+  </aside>
+
+  <input type="file" id="ml-file-input" accept="image/*" style="display:none" onchange="handleImageFile(event)">
+
+  <script src="app.js"></script>
+</body>
+</html>

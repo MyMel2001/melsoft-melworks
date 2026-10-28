@@ -1,0 +1,66 @@
+/* MelSound Studio styles */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #101418;
+  color: #e2e8f0;
+  overflow: hidden;
+}
+
+.ms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.ms-brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: #a78bfa;
+}
+
+.ms-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ms-btn {
+  padding: 6px 12px;
+  background: #a78bfa;
+  color: #0f172a;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ms-workspace {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ms-project-info {
+  padding: 20px;
+  background: #1e293b;
+  border-radius: 8px;
+  min-width: 420px;
+}
+
+.ms-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.ms-status {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #94a3b8;
+}

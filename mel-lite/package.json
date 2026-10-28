@@ -1,0 +1,17 @@
+{
+  "name": "mel-lite",
+  "version": "1.0.0",
+  "description": "MelLite - Professional Photo Development Studio (Lightroom/Darktable style)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0"
+  },
+  "allowScripts": {
+    "electron@45.1.0": true
+  }
+}

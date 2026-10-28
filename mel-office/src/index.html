@@ -373,6 +373,23 @@
 
     <!-- MelPDF Workspace -->
     <div class="pdf-container" id="pdf-container" style="display: none;">
+      <div class="pdf-editor-panel" id="pdf-editor-panel">
+        <div class="pdf-editor-header">MelPDF Edit</div>
+        <label class="pdf-edit-field">Text
+          <input type="text" id="pdf-edit-text" value="" placeholder="Overlay text" style="width: 180px;">
+        </label>
+        <label class="pdf-edit-field">Size
+          <input type="number" id="pdf-edit-size" value="24" min="6" max="200" style="width: 64px;">
+        </label>
+        <label class="pdf-edit-field">X
+          <input type="number" id="pdf-edit-x" value="72" min="0" style="width: 64px;">
+        </label>
+        <label class="pdf-edit-field">Y
+          <input type="number" id="pdf-edit-y" value="700" min="0" style="width: 64px;">
+        </label>
+        <button class="app-btn" id="btn-pdf-add-text" onclick="handlePdfTextEdit()">Add Text</button>
+        <button class="app-btn" id="btn-pdf-save" onclick="savePdfDocument()">Save PDF</button>
+      </div>
       <iframe id="pdf-viewer" src="" title="PDF Viewer" style="width: 100%; height: 100%; border: 0; background: #ffffff;"></iframe>
     </div>
 

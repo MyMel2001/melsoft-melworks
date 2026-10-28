@@ -44,6 +44,21 @@ function listTools() {
         },
         required: ['points', 'pixels']
       }
+    },
+    {
+      name: 'meldraw_apply_filters',
+      description: 'Apply a Photoshop-style pixel filter (brightness/contrast/invert/grayscale/sepia/threshold/sharpen/blur) to RGBA pixel values.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          filter: { type: 'string', enum: ['brightness', 'contrast', 'invert', 'grayscale', 'sepia', 'threshold', 'sharpen', 'blur'], description: 'Filter to apply.' },
+          brightness: { type: 'number', description: 'Brightness offset (-255..255). Used by brightness/contrast filters.' },
+          contrast: { type: 'number', description: 'Contrast (-255..255). Used by brightness/contrast filters.' },
+          threshold: { type: 'number', description: 'Threshold (0..255). Used by threshold filter.' },
+          pixels: { type: 'array', items: { type: 'number' }, description: 'Flattened RGBA pixel values.' }
+        },
+        required: ['filter', 'pixels']
+      }
     }
   ];
 }
@@ -74,6 +89,41 @@ function callTool(name, args) {
       mapped.push(out.data[i], out.data[i + 1], out.data[i + 2]);
     }
     return { content: [{ type: 'text', text: JSON.stringify({ tool: name, result: { mapped } }) }], isError: false };
+  }
+
+  if (name === 'meldraw_apply_filters') {
+    const filter = args.filter || 'grayscale';
+    const pixels = args.pixels || [];
+    const width = Math.max(1, Math.ceil(pixels.length / 4));
+    const height = 1;
+    const data = new Uint8ClampedArray(pixels.length);
+    for (let i = 0; i < pixels.length; i++) data[i] = Math.max(0, Math.min(255, Number(pixels[i]) || 0));
+
+    const imageData = { width, height, data };
+    let out;
+    if (filter === 'brightness' || filter === 'contrast') {
+      out = FilterEngine.applyBrightnessContrast(imageData, Number(args.brightness) || 0, Number(args.contrast) || 0);
+    } else if (filter === 'invert') {
+      out = FilterEngine.applyInvert(imageData);
+    } else if (filter === 'grayscale') {
+      out = FilterEngine.applyGrayscale(imageData);
+    } else if (filter === 'sepia') {
+      out = FilterEngine.applySepia(imageData);
+    } else if (filter === 'threshold') {
+      out = FilterEngine.applyThreshold(imageData, Number(args.threshold) || 128);
+    } else if (filter === 'sharpen') {
+      out = FilterEngine.applySharpen(imageData);
+    } else if (filter === 'blur') {
+      out = FilterEngine.applyBoxBlur(imageData);
+    } else {
+      return { content: [{ type: 'text', text: JSON.stringify({ tool: name, result: { error: `Unknown filter: ${filter}` } }) }], isError: true };
+    }
+
+    const mapped = [];
+    for (let i = 0; i < out.data.length; i += 4) {
+      mapped.push(out.data[i], out.data[i + 1], out.data[i + 2]);
+    }
+    return { content: [{ type: 'text', text: JSON.stringify({ tool: name, result: { filter, mapped } }) }], isError: false };
   }
 
   return { content: [{ type: 'text', text: JSON.stringify({ tool: name, result: { error: `Unknown tool: ${name}` } }) }], isError: true };

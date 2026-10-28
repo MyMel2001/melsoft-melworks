@@ -2,6 +2,7 @@
 const DocxDocument = require('./docx');
 const XlsxSpreadsheet = require('./xlsx');
 const PptxPresentation = require('./pptx');
+const { MelPdfDocument, StandardFonts } = require('./pdf');
 
 let currentApp = 'word'; // 'word', 'excel', 'ppt', 'pdf'
 let currentRibbonTab = 'home';
@@ -989,6 +990,58 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mime });
 }
 
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1] || '';
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToDataUrl(bytes) {
+  let bin = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+  }
+  return 'data:application/pdf;base64,' + btoa(bin);
+}
+
+async function applyPdfTextEdit(text, x, y, size) {
+  if (!currentPdfFile || !currentPdfFile.dataUrl) return false;
+  const bytes = dataUrlToBytes(currentPdfFile.dataUrl);
+  const doc = await MelPdfDocument.load(bytes);
+  const page = doc.getPage(0);
+  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  page.drawText(text, { x, y, size, font });
+  const newBytes = await doc.save();
+  currentPdfFile = { name: currentPdfFile.name, dataUrl: bytesToDataUrl(newBytes) };
+  const viewer = document.getElementById('pdf-viewer');
+  if (viewer) viewer.src = currentPdfFile.dataUrl;
+  updateStatus();
+  return true;
+}
+
+async function savePdfDocument() {
+  if (!currentPdfFile || !currentPdfFile.dataUrl) return;
+  const bytes = dataUrlToBytes(currentPdfFile.dataUrl);
+  const blob = dataUrlToBlob(currentPdfFile.dataUrl);
+  downloadBlob(blob, currentPdfFile.name);
+}
+
+async function handlePdfTextEdit() {
+  const text = (document.getElementById('pdf-edit-text') || {}).value || '';
+  const size = parseFloat((document.getElementById('pdf-edit-size') || {}).value) || 24;
+  const x = parseFloat((document.getElementById('pdf-edit-x') || {}).value) || 72;
+  const y = parseFloat((document.getElementById('pdf-edit-y') || {}).value) || 700;
+  if (!text) {
+    alert('Enter overlay text first.');
+    return;
+  }
+  const ok = await applyPdfTextEdit(text, x, y, size);
+  if (ok) alert('PDF text overlay applied: "' + text + '"');
+}
+
 async function openPdfFile(file) {
   switchApp('pdf');
   const reader = new FileReader();
@@ -1061,10 +1114,7 @@ function saveDocument() {
 
 async function exportNativeFile() {
   if (currentApp === 'pdf') {
-    if (currentPdfFile && currentPdfFile.dataUrl) {
-      const blob = dataUrlToBlob(currentPdfFile.dataUrl);
-      downloadBlob(blob, currentPdfFile.name);
-    }
+    savePdfDocument();
     return;
   } else if (currentApp === 'word') {
     const docx = new DocxDocument({
