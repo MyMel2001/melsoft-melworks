@@ -15,7 +15,14 @@ function newProject() {
   currentProject = new MelSoundProject();
   document.getElementById('ms-bpm').value = currentProject.bpm;
   document.getElementById('ms-gain').value = currentProject.masterGain;
+  refreshMelSoundGui();
   updateStatus();
+}
+
+function refreshMelSoundGui() {
+  renderPatternsGui();
+  const sel = document.getElementById('ms-pattern-select');
+  renderStepGrid(sel && sel.value ? sel.value : (currentProject && currentProject.patterns.length > 0 ? currentProject.patterns[0].id : null));
 }
 
 function triggerOpen() {
@@ -31,6 +38,7 @@ function handleProjectFile(event) {
       currentProject = MelSoundProject.deserialize(e.target.result);
       document.getElementById('ms-bpm').value = currentProject.bpm;
       document.getElementById('ms-gain').value = currentProject.masterGain;
+      refreshMelSoundGui();
       updateStatus();
     } catch (err) {
       alert('Failed to load MelSound project: ' + err.message);
@@ -158,5 +166,74 @@ function saveWav() {
 
 function addPattern() {
   if (!currentProject) newProject();
-  return currentProject.addPattern('Pattern ' + (currentProject.patterns.length + 1));
+  const pattern = currentProject.addPattern('Pattern ' + (currentProject.patterns.length + 1));
+  refreshMelSoundGui();
+  return pattern;
+}
+
+function deletePatternGui() {
+  if (!currentProject) return;
+  const sel = document.getElementById('ms-pattern-select');
+  const patternId = sel ? sel.value : null;
+  if (!patternId) return;
+  currentProject.removePattern(patternId);
+  refreshMelSoundGui();
+}
+
+function renderPatternsGui() {
+  const sel = document.getElementById('ms-pattern-select');
+  if (!sel) return;
+  const patterns = (currentProject && currentProject.patterns) || [];
+  sel.innerHTML = patterns.length === 0
+    ? '<option value="">No patterns</option>'
+    : patterns.map((p) => '<option value="' + p.id + '">' + p.name + '</option>').join('');
+}
+
+function onPatternSelectGui(value) {
+  renderStepGrid(value);
+}
+
+function renderStepGrid(patternId) {
+  const grid = document.getElementById('ms-step-grid');
+  if (!grid) return;
+  if (!currentProject || !patternId) {
+    grid.innerHTML = '<div class="ms-grid-empty">No pattern selected.</div>';
+    return;
+  }
+  const pattern = currentProject.getPattern(patternId);
+  if (!pattern) {
+    grid.innerHTML = '';
+    return;
+  }
+  const tracks = currentProject.tracks || [];
+  if (tracks.length === 0) {
+    grid.innerHTML = '<div class="ms-grid-empty">Add tracks first.</div>';
+    return;
+  }
+  let html = '<div class="ms-grid">';
+  html += '<div class="ms-grid-row ms-grid-head">';
+  html += '<div class="ms-grid-corner"></div>';
+  for (let s = 0; s < 16; s++) html += '<div class="ms-grid-head">' + (s + 1) + '</div>';
+  html += '</div>';
+  for (const track of tracks) {
+    const steps = pattern.steps[track.id] || new Array(16).fill(0);
+    html += '<div class="ms-grid-row">';
+    html += '<div class="ms-grid-label">' + track.name + '</div>';
+    for (let s = 0; s < 16; s++) {
+      const on = steps[s] ? ' ms-grid-cell-on' : '';
+      html += '<button class="ms-grid-btn' + on + '" onclick="toggleStepGui(\'' + patternId + '\', \'' + track.id + '\', ' + s + ')">' + (steps[s] || '·') + '</button>';
+    }
+  }
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+function toggleStepGui(patternId, trackId, stepIdx) {
+  if (!currentProject) return;
+  const pattern = currentProject.getPattern(patternId);
+  if (!pattern) return;
+  if (!pattern.steps[trackId]) pattern.steps[trackId] = new Array(16).fill(0);
+  const steps = pattern.steps[trackId];
+  const idx = Math.max(0, Math.min(15, stepIdx));
+  steps[idx] = steps[idx] ? 0 : 60;
 }

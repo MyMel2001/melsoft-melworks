@@ -97,8 +97,10 @@
       <button class="mf-btn" id="mf-btn-add-comp" onclick="createMfComp()">New Comp</button>
       <button class="mf-btn" id="mf-btn-add-layer" onclick="addMfLayer()">Add Layer</button>
       <button class="mf-btn" id="mf-btn-add-layer-src" onclick="document.getElementById('mf-layer-src-input').click()">Add Layer from Media...</button>
+      <button class="mf-btn" id="mf-btn-add-picture" onclick="addMfPicture()">Add Picture...</button>
       <div class="mf-layer-list" id="mf-layer-list">No layers in comp.</div>
       <input type="file" id="mf-layer-src-input" accept="video/*,audio/*,image/*" style="display:none" onchange="onMfLayerSource(event)">
+      <input type="file" id="mf-picture-input" accept="image/*" style="display:none" onchange="onMfPictureSource(event)">
 
       <div class="mf-panel-title">Layer Tween</div>
       <label class="mf-field">Layer

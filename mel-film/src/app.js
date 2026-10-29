@@ -49,7 +49,7 @@ function getMfTimeline() {
   const timeline = MelFilmTimeline.create(comp.name, comp.frameRate);
   const track = timeline.addTrack('Video', 'video');
   comp.layers.forEach((l) => {
-    const lastFrame = (l.keyframes || []).reduce((m, k) => Math.max(m, Number(k.frame) || 0), 0);
+    const lastFrame = (l.keyframes || []).reduce((m, k) => Math.max(m, Number(k.frame) || 0), 0) || (comp.frameCount > 0 ? comp.frameCount : 24);
     timeline.addClip(track.id, l.source, 0, lastFrame);
   });
   return timeline;
@@ -119,6 +119,18 @@ function addMfLayerWithSource(source) {
   const comp = getMfComp();
   comp.addLayer('Layer ' + (comp.layers.length + 1), source);
   renderMfComps();
+}
+
+function addMfPicture() {
+  document.getElementById('mf-picture-input').click();
+}
+
+function onMfPictureSource(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const source = file.path || '';
+  if (!source) { alert('Picture source requires a file system path.'); return; }
+  addMfLayerWithSource(source);
 }
 
 function onMfLayerSource(event) {
