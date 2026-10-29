@@ -1,47 +1,19 @@
 # To do
 
-## MelOffice
+## MelCromedia
 
-* [x] Complete file parsing
-* [x] Add a PDF viewing/editing mode.
-
-## MelDraw
-
-* [x] Add subject selection (click on a subject to auto-select it.)
-* [x] Add curves.
-
-## MelLite
-
-* [x] Create it
-* [x] It should work near-identical to Adobe LightRoom/Darktable
-* [x] Should be feature complete
-* [x] Allow importing of ProRes RAW, DNG, and all other major RAW formats
-	* [x] Allow importing of compressed image types too - such as JPEG and PNG.
-* [x] Should export as standard files.
+* [] Add tweening+full object support
 
 ## MelFilm
 
-* [x] Create it
-* [x] Should work near identical to Adobe Primere/KDenLive
-* [x] Should be feature complete
-* [x] Should also have something similar to After Effects built-in (as another tab)
-* [x] Should have several rendering targets. (4k TV, 1080p TV, YouTube, Custom, etc.)
-	* [x] "Render" should be the third tab.
-* [x] Should be powered by FFMPEG.
-* [x] Should save/load ZIPed bundles of Adobe Primere and After Effects files.
-	* [x] See: @file-standards/adobe-film-editing-unofficial/main.md for an unofficial specs file for these filetypes.
+* [] Add tweening.
 
-## MelSound
+## MelVU
 
-* [x] Create it
-* [x] Allow opening/saving of FL Studio project and plugin files
-* [x] Should allow plugins (such as Sythesizer V or Vocaloid.)
-* [x] Should work near-identical to FL Studio power-wise except be as easy as Apple Garageband
-* [x] Allow creation/editing/deletion of instrumentals, vocals, and other sounds.
-
-## To add to all projects
-
-* [x] MCP Servers (so AI agents can easily control our software, convenient for software testing)
+* [] Create the app
+* [] Should work near-idenetically to NVU/Komposer for HTML visual editing (as well as markdown editing)
+* [] Should be as powerful as Adobe DreamWeaver for CSS
+* [] Should be as great as VSCode for other langs (example: JS, Python3, Golang)
 
 ## The standard
 
@@ -49,3 +21,7 @@
 * Electron 45.1.0
 * Fast, snappy, fully functional.
 * HIGHLY Standards-compliant
+* Each app should have a MCP server for agentic use.
+* Make these things work
+* Make everything beautiful. To quote Steve Jobs: "We want both. We want both the power and the sex."
+* No stopping until 100% COMPLETE WITH EVERYTHING.
