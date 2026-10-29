@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MelVU - Visual Web Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="melvu-header">
+    <div class="melvu-brand">MelVU</div>
+    <div class="melvu-actions">
+      <button class="melvu-btn" id="melvu-btn-new" onclick="melvuNewFile()">New</button>
+      <button class="melvu-btn" id="melvu-btn-open" onclick="triggerMelvuOpen()">Open...</button>
+      <button class="melvu-btn" id="melvu-btn-save" onclick="melvuSaveFile()">Save</button>
+      <button class="melvu-btn" id="melvu-btn-save-as" onclick="triggerMelvuSaveAs()">Save As...</button>
+      <button class="melvu-btn" id="melvu-btn-format" onclick="melvuEditorAction('format')">Format</button>
+      <button class="melvu-btn" id="melvu-btn-comment" onclick="melvuEditorAction('toggleComment')">Toggle Comment</button>
+    </div>
+  </header>
+
+  <main class="melvu-workspace" id="melvu-workspace">
+    <textarea id="melvu-editor" class="melvu-editor" spellcheck="false" placeholder="Type HTML, Markdown, CSS, JS, Python, Go..."></textarea>
+    <iframe id="melvu-preview" class="melvu-preview" sandbox="allow-same-origin"></iframe>
+  </main>
+
+  <footer class="melvu-statusbar">
+    <span id="melvu-status">MelVU | No document open</span>
+    <span id="melvu-lang">HTML</span>
+  </footer>
+
+  <input type="file" id="melvu-file-input" accept=".html,.htm,.css,.js,.mjs,.json,.md,.markdown,.py,.go,.txt" style="display:none" onchange="handleMelvuFile(event)">
+  <input type="file" id="melvu-save-input" accept=".html,.htm,.css,.js,.mjs,.json,.md,.markdown,.py,.go,.txt" style="display:none" onchange="handleMelvuSaveAs(event)">
+
+  <script src="app.js"></script>
+</body>
+</html>

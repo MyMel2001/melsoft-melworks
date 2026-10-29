@@ -5,6 +5,7 @@ const path = require('path');
 const SwfMovie = require('./src/swf');
 const FlaProject = require('./src/fla');
 const As3Engine = require('./src/as3');
+const MelTween = require('./src/tween');
 
 async function runTests() {
   console.log('=== MelCromedia Complete Test Suite ===\n');
@@ -283,10 +284,94 @@ async function runTests() {
   console.log('   ✓ End-to-end FLA → SWF export with AS3 works');
 
   // =========================================
+  // 12. MELCROMADIA TWEEN ENGINE
+  // =========================================
+  console.log('\n12. Testing MelTween Engine...');
+  const TWEEN_EASING_NAMES = ['linear', 'quadIn', 'quadOut', 'quadInOut', 'cubicIn', 'cubicOut', 'cubicInOut', 'backOut', 'elasticOut', 'bounceOut'];
+  for (const name of TWEEN_EASING_NAMES) {
+    assert.ok(Math.abs(MelTween.ease(name, 0)) < 1e-9, `ease(${name}, 0) clamps to 0`);
+    assert.ok(Math.abs(MelTween.ease(name, 1) - 1) < 1e-9, `ease(${name}, 1) clamps to 1`);
+    assert.strictEqual(typeof MelTween.EASING[name], 'function', `EASING defines ${name}`);
+  }
+  for (const name of ['elasticOut', 'bounceOut']) {
+    for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+      const v = MelTween.ease(name, t);
+      assert.ok(v >= 0 && v <= 1, `ease(${name}, ${t}) in range`);
+    }
+  }
+  assert.strictEqual(MelTween.ease('unknownEase', 0.5), 0.5, 'Unknown easing falls back to linear');
+
+  assert.strictEqual(MelTween.tweenValue(0, 100, 0.5, 'linear'), 50, 'tweenValue interpolates linearly');
+  assert.strictEqual(MelTween.tweenValue(0, 100, 0.5, 'quadOut'), 75, 'tweenValue honors easing');
+
+  const blendedHex = MelTween.lerpColor('#ff0000', '#00ff00', 0.5);
+  assert(/^#[0-9a-f]{6}$/i.test(blendedHex), 'lerpColor returns valid hex');
+  assert.strictEqual(MelTween.lerpColor('#112233', '#112233', 0.5), '#112233', 'lerpColor round trip preserves color');
+
+  const fullFrom = { type: 'rect', x: 10, y: 20, width: 100, height: 50, rotation: 0, scaleX: 1, scaleY: 1, alpha: 1, fill: '#ff0000', stroke: '#000000', strokeWidth: 2 };
+  const fullTo = { type: 'rect', x: 30, y: 40, width: 150, height: 90, rotation: 30, scaleX: 2, scaleY: 0.5, alpha: 0.5, fill: '#00ff00', stroke: '#000000', strokeWidth: 3 };
+  const fullMid = MelTween.interpolateProps(fullFrom, fullTo, 0.5, 'linear');
+  assert.strictEqual(fullMid.x, 20, 'interpolateProps midpoint x');
+  assert.strictEqual(fullMid.width, 125, 'interpolateProps midpoint width');
+  assert.strictEqual(fullMid.alpha, 0.75, 'interpolateProps midpoint alpha');
+  assert.strictEqual(fullMid.scaleX, 1.5, 'interpolateProps midpoint scaleX');
+  assert.strictEqual(fullMid.scaleY, 0.75, 'interpolateProps midpoint scaleY');
+  assert.strictEqual(fullMid.rotation, 15, 'interpolateProps midpoint rotation');
+  assert.strictEqual(fullMid.strokeWidth, 2.5, 'interpolateProps midpoint strokeWidth');
+  assert.ok(/^#[0-9a-f]{6}$/i.test(fullMid.fill), 'interpolateProps midpoint fill is hex');
+
+  const morphFrom = { type: 'path', points: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }] };
+  const morphTo = { type: 'path', points: [{ x: 20, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 20 }] };
+  const sameCountMorphed = MelTween.interpolatePath(morphFrom.points, morphTo.points, 1, 'linear');
+  assert.strictEqual(sameCountMorphed.length, 3, 'interpolatePath returns original count for equal lengths');
+  assert.strictEqual(sameCountMorphed[0].x, 20, 'interpolatePath endpoint preserved (start)');
+
+  const diffCountMorphed = MelTween.interpolatePath(
+    [{ x: 0, y: 0 }, { x: 10, y: 0 }],
+    [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 0 }, { x: 30, y: 0 }],
+    1,
+    'linear'
+  );
+  assert.strictEqual(diffCountMorphed.length, 4, 'interpolatePath resamples to max point count');
+
+  const groupFrom = { type: 'group', elements: [{ type: 'rect', x: 0, y: 0, width: 10, height: 10, alpha: 1, rotation: 0 }] };
+  const groupTo = { type: 'group', elements: [{ type: 'rect', x: 5, y: 5, width: 20, height: 20, alpha: 1, rotation: 0 }] };
+  const groupMid = MelTween.interpolateElements([groupFrom], [groupTo], 0.5, 'linear');
+  assert.strictEqual(groupMid[0].type, 'group', 'interpolateElements keeps group type');
+  assert.strictEqual(groupMid[0].elements.length, 1, 'interpolateElements recurses group children');
+  assert.strictEqual(groupMid[0].elements[0].x, 2.5, 'interpolateElements interpolates child props');
+
+  const symFrom = { type: 'symbol', symbolName: 'Logo', elements: [] };
+  const symTo = { type: 'symbol', symbolName: 'Logo', elements: [] };
+  const symMid = MelTween.interpolateElements([symFrom], [symTo], 0.5, 'linear');
+  assert.strictEqual(symMid[0].type, 'symbol', 'interpolateElements handles symbol instances');
+
+  const fromKF = { kf: { elements: [{ type: 'rect', x: 0, y: 0, width: 10, height: 10, alpha: 1, rotation: 0, fill: '#f97316' }] }, frame: 0 };
+  const toKF = { kf: { elements: [{ type: 'rect', x: 100, y: 0, width: 10, height: 10, alpha: 1, rotation: 0, fill: '#f97316' }] }, frame: 100 };
+  const sameFrameEls = MelTween.tweenFrame({ fromKF, toKF: fromKF, frame: 50, easeName: 'linear' });
+  assert.strictEqual(sameFrameEls.length, 1, 'tweenFrame same-frame returns from copy');
+  assert.strictEqual(sameFrameEls[0].x, 0, 'tweenFrame same-frame returns from values');
+
+  const missingNextEls = MelTween.tweenFrame({ fromKF, toKF: null, frame: 50, easeName: 'linear' });
+  assert.strictEqual(missingNextEls.length, 1, 'tweenFrame missing-next returns from');
+
+  const midEls = MelTween.tweenFrame({ fromKF, toKF, frame: 50, easeName: 'linear' });
+  assert.strictEqual(midEls[0].x, 50, 'tweenFrame mid-frame tween');
+  const firstEls = MelTween.tweenFrame({ fromKF, toKF, frame: 0, easeName: 'linear' });
+  assert.strictEqual(firstEls[0].x, 0, 'tweenFrame start frame returns from');
+  const lastEls = MelTween.tweenFrame({ fromKF, toKF, frame: 100, easeName: 'linear' });
+  assert.strictEqual(lastEls[0].x, 100, 'tweenFrame end frame returns to');
+
+  // Every documented tween export must be present
+  for (const key of ['EASING', 'ease', 'lerp', 'lerpColor', 'tweenValue', 'interpolateProps', 'interpolatePath', 'interpolateElements', 'tweenFrame']) {
+    assert.strictEqual(typeof MelTween[key], (key === 'EASING') ? 'object' : 'function', `MelTween exposes ${key}`);
+  }
+
+  // =========================================
   // Final Summary
   // =========================================
   console.log('\n========================================');
-  console.log('ALL 11 TESTS PASSED');
+  console.log('ALL 12 TESTS PASSED');
   console.log('========================================');
   console.log('MelCromedia Professional Studio is fully functional with:');
   console.log('  • SWF v19 binary encoder/decoder');
@@ -296,6 +381,7 @@ async function runTests() {
   console.log('  • Flash Player standard library (DisplayList, Events, Geometry, ByteArray, Timer)');
   console.log('  • FLA / XFL project serialization');
   console.log('  • End-to-end AS3 workflow');
+  console.log('  • MelTween engine (easings, interpolation, shape morphing)');
 }
 
 runTests().catch(err => {

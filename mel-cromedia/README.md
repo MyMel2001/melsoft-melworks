@@ -11,10 +11,19 @@ MelCromedia provides a full-featured animation studio with timeline-based editin
 ### Timeline & Animation
 - Multi-layer timeline with keyframe support
 - Frame-by-frame animation
-- Motion tweens with easing
+- Motion tweens with 11 easings (linear, quadIn/Out/InOut, cubicIn/Out/InOut, backOut, elasticOut, bounceOut) via `MelTween`
+- Shape tween / morph between keyframes (rect, oval, line, path outlines + color blend)
 - Onion skinning for frame reference
 - Frame rate control (1-60 fps)
 - Play, pause, rewind, and loop controls
+
+### Full Object Support
+- Every stage element carries full transform/identity props: x, y, width, height, scaleX/scaleY, rotation, alpha, visible, name, locked
+- Alpha, scale, rotation, name, visible, locked editable via the Properties inspector
+- Transform handles support move, resize (via scale), and rotate (Q); rotate handle above top-center, Shift snaps to 15°
+- Groups (Ctrl+G) with relative children coordinates; Ungroup (Ctrl+Shift+G)
+- Symbol instances (F8-placed) with live library resolution and tween support
+- Multi-select via marquee / Ctrl+click, duplicate (Ctrl+D)
 
 ### Drawing Tools
 - Selection and subselection tools
@@ -32,6 +41,7 @@ MelCromedia provides a full-featured animation studio with timeline-based editin
 - Library panel with preview
 - Drag instances to stage
 - Edit in place mode
+- Placed instances support full transform, tweening, groups, and rendering
 
 ### ActionScript 3 / AVM2
 - Full AS3 lexer and parser
@@ -85,14 +95,15 @@ mel-flash/
 ├── preload.js        # Electron preload bridge
 ├── server.js         # Node HTTP server for browser mode
 ├── package.json      # Dependencies and scripts
-├── test.js           # Automated check test suite (11 tests)
+├── test.js           # Automated check test suite (12 tests)
 ├── src/
 │   ├── index.html    # Main application shell
 │   ├── styles.css    # Flash Professional authentic styling
 │   ├── app.js        # Timeline, tools, and UI controller
 │   ├── as3.js        # AS3 lexer, parser, compiler, runtime
 │   ├── swf.js        # SWF v19 encoder/decoder with AS3 tags
-│   └── fla.js        # FLA/XFL project serialization
+│   ├── fla.js        # FLA/XFL project serialization
+│   └── tween.js      # Shared tween engine (easings, interpolation, morph)
 └── samples/          # Sample FLA projects for testing
 ```
 
@@ -142,6 +153,7 @@ Verifies:
 9. Syntax checker
 10. FLA import/export
 11. End-to-end AS3 workflow
+12. MelTween engine (easings, interpolation, shape morphing)
 
 ## Usage
 
@@ -159,6 +171,9 @@ Verifies:
 | F6 | Insert Keyframe |
 | F7 | Insert Blank Keyframe |
 | F8 | Convert to Symbol |
+| Ctrl+G | Group Selection |
+| Ctrl+Shift+G | Ungroup Selection |
+| Ctrl+D | Duplicate Selection |
 | Ctrl+Enter | Test Movie |
 | Enter | Play/Pause Timeline |
 | Q | Free Transform Tool |

@@ -1,0 +1,97 @@
+/* MelVU - Visual Web Studio styles */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.melvu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.melvu-brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.melvu-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.melvu-btn {
+  padding: 6px 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.melvu-btn:hover {
+  background: #1e293b;
+}
+
+.melvu-workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  background: #020617;
+}
+
+.melvu-workspace.melvu-hidden {
+  display: none;
+}
+
+.melvu-editor {
+  flex: 1;
+  width: 50%;
+  height: 100%;
+  background: #020617;
+  color: #e2e8f0;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px;
+  font-family: 'Cascadia Code', Consolas, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.melvu-editor.melvu-hidden {
+  display: none;
+}
+
+.melvu-preview {
+  flex: 1;
+  width: 50%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+.melvu-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px;
+  background: #1e293b;
+  border-top: 1px solid #334155;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.melvu-statusbar span:last-child {
+  color: #38bdf8;
+}

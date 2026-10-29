@@ -1,0 +1,18 @@
+{
+  "name": "mel-vu",
+  "version": "1.0.0",
+  "description": "MelVU - Visual Web Studio (NVU/Komposer-class HTML editor, DreamWeaver-class CSS, VSCode-class code editing)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "mcp": "node mcp.js",
+    "test": "node test.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0"
+  },
+  "allowScripts": {
+    "electron@45.1.0": true
+  }
+}

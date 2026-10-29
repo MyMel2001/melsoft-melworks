@@ -43,10 +43,84 @@ let library = [
 ];
 
 let selectedElementIndex = -1;
+let selectedIndices = []; // Multi-selection for grouping / duplicating
 let isDrawing = false;
 let startX = 0, startY = 0;
 let currentPath = [];
 let transformHandle = null; // 'nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w', 'rot'
+
+// Common transform/identity property set carried by every stage element
+function makeElement(props) {
+  return Object.assign({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+    alpha: 1,
+    visible: true,
+    name: '',
+    locked: false
+  }, props);
+}
+
+// Axis-aligned bounding box in element-local (untransformed) coordinates
+function elementBBox(el) {
+  if (el.type === 'line') {
+    return {
+      x: Math.min(el.x1, el.x2),
+      y: Math.min(el.y1, el.y2),
+      width: Math.abs(el.x2 - el.x1),
+      height: Math.abs(el.y2 - el.y1)
+    };
+  }
+  if (el.type === 'path' && el.points && el.points.length) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of el.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }
+  return { x: el.x || 0, y: el.y || 0, width: el.width || 60, height: el.height || 60 };
+}
+
+// Resolve live children for group/symbol elements (symbols read from the library at render time)
+function getChildren(el) {
+  if (el.type === 'group') return el.elements || [];
+  if (el.type === 'symbol') {
+    const sym = library.find(s => s.name === el.symbolName);
+    return sym ? sym.elements : [];
+  }
+  return [];
+}
+
+// Map a stage point into the element's untransformed local space (inverse rotation/scale about center)
+function inverseTransformPoint(el, px, py) {
+  const bbox = elementBBox(el);
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
+  let dx = px - cx;
+  let dy = py - cy;
+  if (el.rotation) {
+    const r = (-el.rotation * Math.PI) / 180;
+    const cos = Math.cos(r);
+    const sin = Math.sin(r);
+    const rx = dx * cos - dy * sin;
+    const ry = dx * sin + dy * cos;
+    dx = rx;
+    dy = ry;
+  }
+  const sx = el.scaleX || 1;
+  const sy = el.scaleY || 1;
+  if (sx) dx /= sx;
+  if (sy) dy /= sy;
+  return { x: cx + dx, y: cy + dy };
+}
 
 // Marquee Selection State
 let marqueeStart = null; // { x, y }
@@ -72,14 +146,14 @@ window.addEventListener('DOMContentLoaded', () => {
 function initProjectModel() {
   layers[0].frames = [];
   for (let i = 0; i < MAX_FRAMES; i++) {
-    layers[0].frames.push({ isKeyframe: (i === 0), isBlank: false, isTween: false, elements: [], actions: '' });
+    layers[0].frames.push({ isKeyframe: (i === 0), isBlank: false, isTween: false, isShapeTween: false, elements: [], actions: '' });
   }
 
   // Sample animated content across frames 0 to 20 with tweening
   layers[0].frames[0].isKeyframe = true;
   layers[0].frames[0].isTween = true;
   layers[0].frames[0].elements = [
-    {
+    makeElement({
       type: 'rect',
       x: 100,
       y: 150,
@@ -89,13 +163,13 @@ function initProjectModel() {
       fill: '#f97316',
       stroke: '#000000',
       strokeWidth: 2
-    }
+    })
   ];
   layers[0].frames[0].actions = '// Frame 1 Script\nstop();';
 
   layers[0].frames[20].isKeyframe = true;
   layers[0].frames[20].elements = [
-    {
+    makeElement({
       type: 'rect',
       x: 520,
       y: 280,
@@ -105,7 +179,7 @@ function initProjectModel() {
       fill: '#38bdf8',
       stroke: '#000000',
       strokeWidth: 2
-    }
+    })
   ];
 }
 
@@ -159,6 +233,9 @@ function renderTimeline() {
         if (frameData.isTween) {
           cell.classList.add('tween');
         }
+        if (frameData.isShapeTween) {
+          cell.classList.add('shape-tween');
+        }
         if (frameData.actions) {
           cell.classList.add('has-action');
         }
@@ -186,6 +263,8 @@ function updatePlayhead() {
   // Load ActionScript for current keyframe
   const curFrameData = getFrameData(activeLayerIndex, currentFrame);
   document.getElementById('actionscript-input').value = (curFrameData && curFrameData.actions) ? curFrameData.actions : '';
+  const easingSel = document.getElementById('sel-tween-easing');
+  if (easingSel) easingSel.value = (curFrameData && curFrameData.ease) ? curFrameData.ease : 'linear';
 }
 
 function handleTimelineClick(e) {
@@ -198,6 +277,7 @@ function handleTimelineClick(e) {
 function gotoFrame(f) {
   currentFrame = f;
   selectedElementIndex = -1;
+  selectedIndices = [];
   updatePlayhead();
   renderStage();
 }
@@ -234,7 +314,7 @@ function getNextKeyframe(layerIdx, startFrame) {
 function getRenderElements(layerIdx, frameIdx) {
   const prev = getEffectiveKeyframe(layerIdx, frameIdx);
   if (!prev) return [];
-  if (prev.frame === frameIdx || !prev.kf.isTween) {
+  if (prev.frame === frameIdx || (!prev.kf.isTween && !prev.kf.isShapeTween)) {
     return prev.kf.elements || [];
   }
 
@@ -243,29 +323,59 @@ function getRenderElements(layerIdx, frameIdx) {
     return prev.kf.elements || [];
   }
 
-  // Linear interpolation between prev and next
   const t = (frameIdx - prev.frame) / (next.frame - prev.frame);
-  const interpolated = [];
+  const easeName = prev.kf.ease || 'linear';
   const pEls = prev.kf.elements || [];
   const nEls = next.kf.elements || [];
 
-  for (let i = 0; i < pEls.length; i++) {
-    const p = pEls[i];
-    const n = nEls[i] || p;
-    interpolated.push({
-      type: p.type,
-      x: p.x + (n.x - p.x) * t,
-      y: p.y + (n.y - p.y) * t,
-      width: (p.width || 0) + ((n.width || p.width || 0) - (p.width || 0)) * t,
-      height: (p.height || 0) + ((n.height || p.height || 0) - (p.height || 0)) * t,
-      rotation: (p.rotation || 0) + ((n.rotation || 0) - (p.rotation || 0)) * t,
-      fill: p.fill,
-      stroke: p.stroke,
-      strokeWidth: p.strokeWidth
-    });
+  if (prev.kf.isShapeTween) {
+    // Shape tween: morph outlines + colors between the two keyframes
+    return MelTween.interpolateElements(
+      pEls.map(el => shapeTweenOutline(el)),
+      nEls.map(el => shapeTweenOutline(el)),
+      t,
+      easeName
+    );
   }
 
-  return interpolated;
+  // Classic motion tween: full object property interpolation
+  return MelTween.interpolateElements(pEls, nEls, t, easeName);
+}
+
+// Convert an element into a path representation for shape tweening
+function shapeTweenOutline(el) {
+  const clone = JSON.parse(JSON.stringify(el));
+  if (clone.type === 'rect') {
+    clone.type = 'path';
+    clone.points = [
+      { x: clone.x, y: clone.y },
+      { x: clone.x + clone.width, y: clone.y },
+      { x: clone.x + clone.width, y: clone.y + clone.height },
+      { x: clone.x, y: clone.y + clone.height },
+      { x: clone.x, y: clone.y }
+    ];
+  } else if (clone.type === 'oval') {
+    clone.type = 'path';
+    const cx = clone.x + clone.width / 2;
+    const cy = clone.y + clone.height / 2;
+    clone.points = [];
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      clone.points.push({
+        x: cx + Math.cos(a) * (clone.width / 2),
+        y: cy + Math.sin(a) * (clone.height / 2)
+      });
+    }
+  } else if (clone.type === 'line') {
+    clone.type = 'path';
+    clone.points = [
+      { x: clone.x1, y: clone.y1 },
+      { x: clone.x2, y: clone.y2 }
+    ];
+  } else if (clone.type === 'path' && !clone.points) {
+    clone.points = [{ x: clone.x || 0, y: clone.y || 0 }, { x: clone.x || 0, y: clone.y || 0 }];
+  }
+  return clone;
 }
 
 // --- Layer Controls ---
@@ -277,7 +387,7 @@ function selectLayer(idx) {
 function addNewLayer() {
   const newFrames = [];
   for (let i = 0; i < MAX_FRAMES; i++) {
-    newFrames.push({ isKeyframe: (i === 0), isBlank: false, isTween: false, elements: [], actions: '' });
+    newFrames.push({ isKeyframe: (i === 0), isBlank: false, isTween: false, isShapeTween: false, elements: [], actions: '' });
   }
   layers.push({
     name: `Layer ${layers.length + 1}`,
@@ -320,6 +430,7 @@ function insertKeyframe() {
     isKeyframe: true,
     isBlank: false,
     isTween: false,
+    isShapeTween: false,
     elements: elementsCopy,
     actions: ''
   };
@@ -332,6 +443,7 @@ function insertBlankKeyframe() {
     isKeyframe: true,
     isBlank: true,
     isTween: false,
+    isShapeTween: false,
     elements: [],
     actions: ''
   };
@@ -345,6 +457,22 @@ function createClassicTween() {
   eff.kf.isTween = !eff.kf.isTween;
   renderTimeline();
   renderStage();
+}
+
+function createShapeTween() {
+  const eff = getEffectiveKeyframe(activeLayerIndex, currentFrame);
+  if (!eff) return;
+  eff.kf.isShapeTween = !eff.kf.isShapeTween;
+  renderTimeline();
+  renderStage();
+}
+
+function setTweenEasing(name) {
+  const eff = getEffectiveKeyframe(activeLayerIndex, currentFrame);
+  if (!eff) return;
+  eff.kf.ease = name;
+  const sel = document.getElementById('sel-tween-easing');
+  if (sel) sel.value = name;
 }
 
 // --- Playback Controls ---
@@ -477,15 +605,27 @@ function handleStageMouseDown(e) {
     transformHandle = null;
 
     // Check hit on elements (top-most first)
+    const additive = (e.ctrlKey || e.metaKey);
     for (let i = kf.elements.length - 1; i >= 0; i--) {
       const el = kf.elements[i];
       if (isPointInsideElement(pos.x, pos.y, el)) {
-        selectedElementIndex = i;
+        if (additive) {
+          const idx = selectedIndices.indexOf(i);
+          if (idx === -1) {
+            selectedIndices.push(i);
+          } else {
+            selectedIndices.splice(idx, 1);
+          }
+          selectedElementIndex = selectedIndices[selectedIndices.length - 1];
+        } else {
+          selectedIndices = [i];
+          selectedElementIndex = i;
+        }
         updateInspector(el);
         break;
       }
     }
-    if (selectedElementIndex === -1) {
+    if (selectedElementIndex === -1 && selectedIndices.length === 0) {
       updateInspector(null);
     }
   } else if (currentTool === 'pencil' || currentTool === 'brush') {
@@ -509,7 +649,7 @@ function handleStageMouseDown(e) {
   } else if (currentTool === 'text') {
     const text = prompt('Enter Flash Text:', 'MelCromedia 2026');
     if (text) {
-      kf.elements.push({
+      kf.elements.push(makeElement({
         type: 'text',
         text: text,
         x: pos.x,
@@ -518,7 +658,7 @@ function handleStageMouseDown(e) {
         stroke: strokeColor,
         strokeWidth: strokeWidth,
         fontSize: 20
-      });
+      }));
     }
     isDrawing = false;
   }
@@ -547,7 +687,7 @@ function handleStageMouseMove(e) {
   if ((currentTool === 'select' || currentTool === 'transform') && selectedElementIndex !== -1) {
     const el = kf.elements[selectedElementIndex];
     if (transformHandle) {
-      applyTransform(el, transformHandle, pos.x - startX, pos.y - startY);
+      applyTransform(el, transformHandle, pos.x - startX, pos.y - startY, pos, e.shiftKey);
       startX = pos.x;
       startY = pos.y;
     } else {
@@ -556,6 +696,22 @@ function handleStageMouseMove(e) {
       startX = pos.x;
       startY = pos.y;
     }
+    renderStage();
+  } else if ((currentTool === 'select' || currentTool === 'transform') && selectedIndices.length > 0) {
+    const deltaX = pos.x - startX;
+    const deltaY = pos.y - startY;
+    for (const idx of selectedIndices) {
+      const el = kf.elements[idx];
+      if (!el || el.locked) continue;
+      if (transformHandle) {
+        applyTransform(el, transformHandle, deltaX, deltaY, pos, e.shiftKey);
+      } else {
+        el.x += deltaX;
+        el.y += deltaY;
+      }
+    }
+    startX = pos.x;
+    startY = pos.y;
     renderStage();
   } else if (currentTool === 'pencil' || currentTool === 'brush') {
     currentPath.push({ x: pos.x, y: pos.y });
@@ -584,11 +740,17 @@ function handleStageMouseUp(e) {
     // Finalize marquee selection
     if (marqueeSelection && marqueeSelection.width > 2 && marqueeSelection.height > 2) {
       selectedElementIndex = -1;
-      for (let i = kf.elements.length - 1; i >= 0; i--) {
+      selectedIndices = [];
+      const selX = marqueeSelection.x;
+      const selY = marqueeSelection.y;
+      const selW = marqueeSelection.width;
+      const selH = marqueeSelection.height;
+      for (let i = 0; i < kf.elements.length; i++) {
         const el = kf.elements[i];
-        if (isPointInsideElement(marqueeSelection.x + marqueeSelection.width / 2, marqueeSelection.y + marqueeSelection.height / 2, el)) {
+        const bb = elementBBox(el);
+        if (bb.x + bb.width >= selX && bb.x <= selX + selW && bb.y + bb.height >= selY && bb.y <= selY + selH) {
+          selectedIndices.push(i);
           selectedElementIndex = i;
-          break;
         }
       }
       updateInspector(kf.elements[selectedElementIndex] || null);
@@ -601,7 +763,7 @@ function handleStageMouseUp(e) {
   }
 
   if (currentTool === 'rect') {
-    kf.elements.push({
+    kf.elements.push(makeElement({
       type: 'rect',
       x: Math.min(startX, pos.x),
       y: Math.min(startY, pos.y),
@@ -611,9 +773,9 @@ function handleStageMouseUp(e) {
       fill: fillColor,
       stroke: strokeColor,
       strokeWidth: strokeWidth
-    });
+    }));
   } else if (currentTool === 'oval') {
-    kf.elements.push({
+    kf.elements.push(makeElement({
       type: 'oval',
       x: Math.min(startX, pos.x),
       y: Math.min(startY, pos.y),
@@ -623,9 +785,9 @@ function handleStageMouseUp(e) {
       fill: fillColor,
       stroke: strokeColor,
       strokeWidth: strokeWidth
-    });
+    }));
   } else if (currentTool === 'line') {
-    kf.elements.push({
+    kf.elements.push(makeElement({
       type: 'line',
       x1: startX,
       y1: startY,
@@ -633,15 +795,15 @@ function handleStageMouseUp(e) {
       y2: pos.y,
       stroke: strokeColor,
       strokeWidth: strokeWidth
-    });
+    }));
   } else if (currentTool === 'pencil' || currentTool === 'brush') {
     if (currentPath.length > 1) {
-      kf.elements.push({
+      kf.elements.push(makeElement({
         type: 'path',
         points: currentPath,
         stroke: (currentTool === 'brush' ? fillColor : strokeColor),
         strokeWidth: (currentTool === 'brush' ? strokeWidth * 3 : strokeWidth)
-      });
+      }));
     }
     currentPath = [];
   } else if (currentTool === 'eraser') {
@@ -658,21 +820,45 @@ function handleStageMouseUp(e) {
 }
 
 function isPointInsideElement(px, py, el) {
+  if (el.type === 'group' || el.type === 'symbol') {
+    if (el.locked) return false;
+    if (el.visible === false) return false;
+    if (el.alpha !== undefined && el.alpha <= 0) return false;
+    const kids = getChildren(el);
+    const p = inverseTransformPoint(el, px, py);
+    const offX = (el.type === 'symbol') ? elementBBox(kids).x - el.x : 0;
+    const offY = (el.type === 'symbol') ? elementBBox(kids).y - el.y : 0;
+    const lx = p.x - el.x - offX;
+    const ly = p.y - el.y - offY;
+    for (let i = kids.length - 1; i >= 0; i--) {
+      if (isPointInsideElement(lx, ly, kids[i])) return true;
+    }
+    return false;
+  }
+  if (el.locked) return false;
+  if (el.visible === false) return false;
+  const alpha = (el.alpha === undefined) ? 1 : el.alpha;
+  if (alpha <= 0) return false;
+
+  const p = inverseTransformPoint(el, px, py);
+
   if (el.type === 'rect' || el.type === 'oval') {
-    return px >= el.x && px <= el.x + el.width && py >= el.y && py <= el.y + el.height;
+    const w = el.width || 60;
+    const h = el.height || 60;
+    return p.x >= el.x && p.x <= el.x + w && p.y >= el.y && p.y <= el.y + h;
   } else if (el.type === 'line') {
-    const d = distToSegment(px, py, el.x1, el.y1, el.x2, el.y2);
+    const d = distToSegment(p.x, p.y, el.x1, el.y1, el.x2, el.y2);
     // Use stroke width for line hit testing
     const strokeWidth = el.strokeWidth || 2;
     return d <= Math.max(8, strokeWidth * 1.5);
   } else if (el.type === 'text') {
-    return px >= el.x && px <= el.x + 120 && py >= el.y - 20 && py <= el.y + 10;
+    return p.x >= el.x && p.x <= el.x + 120 && p.y >= el.y - 20 && p.y <= el.y + 10;
   } else if (el.type === 'path') {
     // For painted objects (paths), use stroke width for hit testing
     const strokeWidth = (el.strokeWidth || 2) * 2;
     const threshold = Math.max(8, strokeWidth * 1.5);
     for (let i = 0; i < el.points.length - 1; i++) {
-      const d = distToSegment(px, py, el.points[i].x, el.points[i].y, el.points[i + 1].x, el.points[i + 1].y);
+      const d = distToSegment(p.x, p.y, el.points[i].x, el.points[i].y, el.points[i + 1].x, el.points[i + 1].y);
       if (d <= threshold) return true;
     }
   }
@@ -689,48 +875,73 @@ function distToSegment(px, py, x1, y1, x2, y2) {
 
 // Transform Handles & Operations
 function hitTestTransformHandles(px, py, el) {
-  const bbox = { x: el.x, y: el.y, w: el.width || 60, h: el.height || 60 };
+  const bbox = elementBBox(el);
+  const center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
   const handleSize = 8;
   const handles = [
     { name: 'nw', x: bbox.x, y: bbox.y },
-    { name: 'ne', x: bbox.x + bbox.w, y: bbox.y },
-    { name: 'se', x: bbox.x + bbox.w, y: bbox.y + bbox.h },
-    { name: 'sw', x: bbox.x, y: bbox.y + bbox.h },
-    { name: 'n', x: bbox.x + bbox.w / 2, y: bbox.y },
-    { name: 's', x: bbox.x + bbox.w / 2, y: bbox.y + bbox.h },
-    { name: 'e', x: bbox.x + bbox.w, y: bbox.y + bbox.h / 2 },
-    { name: 'w', x: bbox.x, y: bbox.y + bbox.h / 2 }
+    { name: 'ne', x: bbox.x + bbox.width, y: bbox.y },
+    { name: 'se', x: bbox.x + bbox.width, y: bbox.y + bbox.height },
+    { name: 'sw', x: bbox.x, y: bbox.y + bbox.height },
+    { name: 'n', x: bbox.x + bbox.width / 2, y: bbox.y },
+    { name: 's', x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height },
+    { name: 'e', x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
+    { name: 'w', x: bbox.x, y: bbox.y + bbox.height / 2 }
   ];
 
+  const p = inverseTransformPoint(el, px, py);
   for (const h of handles) {
-    if (Math.abs(px - h.x) <= handleSize && Math.abs(py - h.y) <= handleSize) {
+    if (Math.abs(p.x - h.x) <= handleSize && Math.abs(p.y - h.y) <= handleSize) {
       return h.name;
     }
   }
+
+  // Rotate handle above top-center
+  const rotHandle = { name: 'rot', x: center.x, y: bbox.y - 18 };
+  if (Math.abs(p.x - rotHandle.x) <= handleSize && Math.abs(p.y - rotHandle.y) <= handleSize) {
+    return 'rot';
+  }
+
   return null;
 }
 
-function applyTransform(el, handle, dx, dy) {
+function applyTransform(el, handle, dx, dy, pos, shiftKey) {
+  if (handle === 'rot') {
+    const bbox = elementBBox(el);
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
+    const ang = pos ? Math.atan2(pos.y - cy, pos.x - cx) * (180 / Math.PI) : (el.rotation || 0);
+    el.rotation = ang;
+    if (shiftKey) {
+      el.rotation = Math.round(ang / 15) * 15;
+    }
+    return;
+  }
+
+  const baseW = el.width || 60;
+  const baseH = el.height || 60;
+  const sX = (el.scaleX === undefined) ? 1 : el.scaleX;
+  const sY = (el.scaleY === undefined) ? 1 : el.scaleY;
+
   if (handle === 'se') {
-    el.width = Math.max(10, el.width + dx);
-    el.height = Math.max(10, el.height + dy);
+    el.scaleX = sX * (Math.max(10, baseW + dx) / baseW);
+    el.scaleY = sY * (Math.max(10, baseH + dy) / baseH);
   } else if (handle === 'sw') {
     el.x += dx;
-    el.width = Math.max(10, el.width - dx);
-    el.height = Math.max(10, el.height + dy);
+    el.scaleX = sX * (Math.max(10, baseW - dx) / baseW);
   } else if (handle === 'ne') {
     el.y += dy;
-    el.width = Math.max(10, el.width + dx);
-    el.height = Math.max(10, el.height - dy);
+    el.scaleY = sY * (Math.max(10, baseH - dy) / baseH);
+    el.scaleX = sX * (Math.max(10, baseW + dx) / baseW);
   } else if (handle === 'nw') {
     el.x += dx;
     el.y += dy;
-    el.width = Math.max(10, el.width - dx);
-    el.height = Math.max(10, el.height - dy);
+    el.scaleX = sX * (Math.max(10, baseW - dx) / baseW);
+    el.scaleY = sY * (Math.max(10, baseH - dy) / baseH);
   } else if (handle === 'e') {
-    el.width = Math.max(10, el.width + dx);
+    el.scaleX = sX * (Math.max(10, baseW + dx) / baseW);
   } else if (handle === 's') {
-    el.height = Math.max(10, el.height + dy);
+    el.scaleY = sY * (Math.max(10, baseH + dy) / baseH);
   }
 }
 
@@ -760,7 +971,7 @@ function renderStage() {
     if (!layer.visible) return;
     const els = getRenderElements(lIdx, currentFrame);
     els.forEach((el, elIdx) => {
-      const isSelected = (lIdx === activeLayerIndex && elIdx === selectedElementIndex);
+      const isSelected = (lIdx === activeLayerIndex && (elIdx === selectedElementIndex || selectedIndices.indexOf(elIdx) !== -1));
       drawElement(ctx, el, isSelected);
     });
   });
@@ -795,17 +1006,32 @@ function renderStage() {
 }
 
 function drawElement(ctx, el, isSelected = false) {
+  if (el.visible === false) return;
   ctx.save();
 
-  if (el.rotation) {
-    const cx = el.x + (el.width || 0) / 2;
-    const cy = el.y + (el.height || 0) / 2;
+  ctx.globalAlpha = (ctx.globalAlpha || 1) * (el.alpha === undefined ? 1 : el.alpha);
+
+  const bbox = elementBBox(el);
+  if (el.rotation || (el.scaleX || 1) !== 1 || (el.scaleY || 1) !== 1) {
+    const cx = bbox.x + bbox.width / 2;
+    const cy = bbox.y + bbox.height / 2;
     ctx.translate(cx, cy);
-    ctx.rotate((el.rotation * Math.PI) / 180);
+    if (el.rotation) {
+      ctx.rotate((el.rotation * Math.PI) / 180);
+    }
+    if ((el.scaleX || 1) !== 1 || (el.scaleY || 1) !== 1) {
+      ctx.scale(el.scaleX || 1, el.scaleY || 1);
+    }
     ctx.translate(-cx, -cy);
   }
 
-  if (el.type === 'rect') {
+  if (el.type === 'group' || el.type === 'symbol') {
+    const kids = getChildren(el);
+    const off = (el.type === 'symbol') ? elementBBox(kids) : { x: 0, y: 0 };
+    ctx.translate(el.x - off.x, el.y - off.y);
+    kids.forEach(k => drawElement(ctx, k));
+    ctx.translate(off.x - el.x, off.y - el.y);
+  } else if (el.type === 'rect') {
     ctx.fillStyle = el.fill;
     ctx.fillRect(el.x, el.y, el.width, el.height);
     if (el.strokeWidth > 0) {
@@ -856,13 +1082,14 @@ function drawElement(ctx, el, isSelected = false) {
 }
 
 function drawTransformBoundingBox(ctx, el) {
-  const w = el.width || 60;
-  const h = el.height || 60;
+  const bbox = elementBBox(el);
+  const w = bbox.width;
+  const h = bbox.height;
 
   // Blue selection outline
   ctx.strokeStyle = '#38bdf8';
   ctx.lineWidth = 1;
-  ctx.strokeRect(el.x, el.y, w, h);
+  ctx.strokeRect(bbox.x, bbox.y, w, h);
 
   // 8 handles
   const handleSize = 6;
@@ -870,14 +1097,14 @@ function drawTransformBoundingBox(ctx, el) {
   ctx.strokeStyle = '#000000';
 
   const handles = [
-    { x: el.x, y: el.y },
-    { x: el.x + w, y: el.y },
-    { x: el.x + w, y: el.y + h },
-    { x: el.x, y: el.y + h },
-    { x: el.x + w / 2, y: el.y },
-    { x: el.x + w / 2, y: el.y + h },
-    { x: el.x + w, y: el.y + h / 2 },
-    { x: el.x, y: el.y + h / 2 }
+    { x: bbox.x, y: bbox.y },
+    { x: bbox.x + w, y: bbox.y },
+    { x: bbox.x + w, y: bbox.y + h },
+    { x: bbox.x, y: bbox.y + h },
+    { x: bbox.x + w / 2, y: bbox.y },
+    { x: bbox.x + w / 2, y: bbox.y + h },
+    { x: bbox.x + w, y: bbox.y + h / 2 },
+    { x: bbox.x, y: bbox.y + h / 2 }
   ];
 
   handles.forEach(p => {
@@ -886,12 +1113,21 @@ function drawTransformBoundingBox(ctx, el) {
   });
 
   // Center registration point (white circle with black cross)
-  const cx = el.x + w / 2;
-  const cy = el.y + h / 2;
+  const cx = bbox.x + w / 2;
+  const cy = bbox.y + h / 2;
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
+  ctx.stroke();
+
+  // Rotate handle (circle above top-center)
+  const rotHandle = { x: cx, y: bbox.y - 18 };
+  ctx.beginPath();
+  ctx.arc(rotHandle.x, rotHandle.y, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8';
   ctx.stroke();
 }
 
@@ -977,8 +1213,52 @@ function updateInspector(el) {
         <input type="number" value="${Math.round(el.x || el.x1 || 0)}" onchange="updateSelectedProp('x', this.value)">
         <input type="number" value="${Math.round(el.y || el.y1 || 0)}" onchange="updateSelectedProp('y', this.value)">
       </div>
-    </div>`;
-  
+    </div>
+    <div class="prop-row">
+      <label>W / H:</label>
+      <div style="display:flex; gap:4px; width:120px;">
+        <input type="number" value="${Math.round(el.width || 0)}" onchange="updateSelectedProp('width', this.value)">
+        <input type="number" value="${Math.round(el.height || 0)}" onchange="updateSelectedProp('height', this.value)">
+      </div>
+    </div>
+    <div class="prop-row">
+      <label>Scale X / Y:</label>
+      <div style="display:flex; gap:4px; width:120px;">
+        <input type="number" step="0.05" value="${(el.scaleX === undefined) ? 1 : el.scaleX}" onchange="updateSelectedProp('scaleX', this.value)">
+        <input type="number" step="0.05" value="${(el.scaleY === undefined) ? 1 : el.scaleY}" onchange="updateSelectedProp('scaleY', this.value)">
+      </div>
+    </div>
+    <div class="prop-row">
+      <label>Rotation:</label>
+      <input type="number" value="${(el.rotation === undefined) ? 0 : el.rotation}" onchange="updateSelectedProp('rotation', this.value)">
+    </div>
+    <div class="prop-row">
+      <label>Alpha:</label>
+      <input type="range" min="0" max="1" step="0.05" value="${(el.alpha === undefined) ? 1 : el.alpha}" onchange="updateSelectedProp('alpha', this.value)">
+    </div>
+    <div class="prop-row">
+      <label>Visible:</label>
+      <input type="checkbox" ${el.visible === false ? 'checked' : ''} onchange="updateSelectedProp('visible', this.checked)">
+    </div>
+    <div class="prop-row">
+      <label>Locked:</label>
+      <input type="checkbox" ${el.locked ? 'checked' : ''} onchange="updateSelectedProp('locked', this.checked)">
+    </div>
+    <div class="prop-row">
+      <label>Name:</label>
+      <input type="text" value="${el.name || ''}" onchange="updateSelectedProp('name', this.value)">
+    </div>
+    `;
+
+  if (el.type === 'symbol') {
+    html += `
+      <div class="prop-row">
+        <label>Symbol Name:</label>
+        <input type="text" value="${el.symbolName || ''}" readonly style="color:#f97316;">
+      </div>
+    `;
+  }
+
   if (el.type === 'text') {
     html += `
       <div class="prop-row">
@@ -1029,8 +1309,15 @@ function updateSelectedProp(prop, val) {
   const kf = curLayer.frames[currentFrame];
   if (selectedElementIndex !== -1 && kf.elements[selectedElementIndex]) {
     const el = kf.elements[selectedElementIndex];
-    const numericProps = ['x', 'y', 'width', 'height', 'fontSize', 'strokeWidth', 'rotation'];
-    el[prop] = numericProps.includes(prop) ? Number(val) : val;
+    const numericProps = ['x', 'y', 'width', 'height', 'fontSize', 'strokeWidth', 'rotation', 'scaleX', 'scaleY', 'alpha', 'x1', 'y1', 'x2', 'y2'];
+    const booleanProps = ['visible', 'locked'];
+    if (numericProps.includes(prop)) {
+      el[prop] = Number(val);
+    } else if (booleanProps.includes(prop)) {
+      el[prop] = (val === true || val === 'true');
+    } else {
+      el[prop] = val;
+    }
     renderStage();
   }
 }
@@ -1133,9 +1420,135 @@ function promptConvertSymbol() {
   const el = (selectedElementIndex !== -1 && kf.elements[selectedElementIndex]) ? JSON.parse(JSON.stringify(kf.elements[selectedElementIndex])) : {
     type: 'rect', x: -25, y: -25, width: 50, height: 50, fill: fillColor, stroke: strokeColor, strokeWidth: 2
   };
-
   library.push({ name, type, elements: [el] });
   renderLibrary();
+}
+
+// Group current selection into a single group element (Ctrl+G)
+function groupSelection() {
+  const curLayer = layers[activeLayerIndex];
+  const kf = curLayer.frames[currentFrame];
+  const indices = selectedIndices.length > 0
+    ? selectedIndices.filter(i => kf.elements[i])
+    : (selectedElementIndex !== -1 ? [selectedElementIndex] : []);
+  if (indices.length === 0) return;
+
+  const children = indices.map(i => kf.elements[i]);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  children.forEach(el => {
+    const b = elementBBox(el);
+    minX = Math.min(minX, b.x);
+    maxX = Math.max(maxX, b.x + b.width);
+    minY = Math.min(minY, b.y);
+    maxY = Math.max(maxY, b.y + b.height);
+  });
+  const group = makeElement({
+    type: 'group',
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+    elements: children.map(el => {
+      const c = JSON.parse(JSON.stringify(el));
+      c.x = (el.x || 0) - minX;
+      c.y = (el.y || 0) - minY;
+      if (c.type === 'line') {
+        c.x1 = (el.x1 || 0) - minX;
+        c.y1 = (el.y1 || 0) - minY;
+        c.x2 = (el.x2 || 0) - minX;
+        c.y2 = (el.y2 || 0) - minY;
+      }
+      if (c.type === 'path' && c.points) {
+        c.points = c.points.map(p => ({ x: p.x - minX, y: p.y - minY }));
+      }
+      if (c.type === 'text') {
+        c.x = (el.x || 0) - minX;
+        c.y = (el.y || 0) - minY;
+      }
+      return c;
+    })
+  });
+  const at = Math.min(...indices);
+  kf.elements.splice(at, children.length, group);
+  selectedElementIndex = at;
+  selectedIndices = [at];
+  renderStage();
+  updateInspector(group);
+}
+
+// Ungroup selected group element back into plain elements (Ctrl+Shift+G)
+// ponytail: ungroup is single-level only; nested groups stay nested
+function ungroupSelection() {
+  const curLayer = layers[activeLayerIndex];
+  const kf = curLayer.frames[currentFrame];
+  if (selectedElementIndex === -1 || !kf.elements[selectedElementIndex]) return;
+  const el = kf.elements[selectedElementIndex];
+  if (el.type !== 'group') return;
+  const group = el;
+  const children = group.elements || [];
+  children.forEach(c => {
+    c.x = (c.x || 0) + group.x;
+    c.y = (c.y || 0) + group.y;
+  });
+  const at = selectedElementIndex;
+  const newEls = [];
+  children.forEach(c => newEls.push(c));
+  kf.elements.splice(at, 1, ...newEls);
+  selectedElementIndex = newEls.length > 0 ? at : -1;
+  selectedIndices = [];
+  for (let i = 0; i < newEls.length; i++) {
+    if (kf.elements[at + i]) selectedIndices.push(at + i);
+  }
+  if (selectedElementIndex !== -1) {
+    updateInspector(kf.elements[selectedElementIndex]);
+  } else {
+    updateInspector(null);
+  }
+  renderStage();
+}
+
+// Duplicate selected element(s) with a +10/+10 offset (Ctrl+D)
+function duplicateSelection() {
+  const curLayer = layers[activeLayerIndex];
+  const kf = curLayer.frames[currentFrame];
+  const indices = selectedIndices.length > 0
+    ? selectedIndices.filter(i => kf.elements[i])
+    : (selectedElementIndex !== -1 ? [selectedElementIndex] : []);
+  if (indices.length === 0) return;
+  const clones = [];
+  indices.forEach(idx => {
+    const src = kf.elements[idx];
+    const clone = JSON.parse(JSON.stringify(src));
+    clone.x = (src.x || 0) + 10;
+    clone.y = (src.y || 0) + 10;
+    if (clone.type === 'line') {
+      clone.x1 = (src.x1 || 0) + 10;
+      clone.y1 = (src.y1 || 0) + 10;
+      clone.x2 = (src.x2 || 0) + 10;
+      clone.y2 = (src.y2 || 0) + 10;
+    }
+    if (clone.type === 'path' && clone.points) {
+      clone.points = clone.points.map(p => ({ x: p.x + 10, y: p.y + 10 }));
+    }
+    if (clone.type === 'group') {
+      clone.elements = clone.elements.map(c => {
+        const cc = JSON.parse(JSON.stringify(c));
+        cc.x = (c.x || 0) + 10;
+        cc.y = (c.y || 0) + 10;
+        if (cc.type === 'path' && cc.points) {
+          cc.points = cc.points.map(p => ({ x: p.x + 10, y: p.y + 10 }));
+        }
+        return cc;
+      });
+    }
+    clones.push(clone);
+  });
+  clones.forEach(c => kf.elements.push(c));
+  const lastClone = kf.elements[kf.elements.length - 1];
+  selectedElementIndex = kf.elements.length - 1;
+  selectedIndices = [kf.elements.length - 1];
+  updateInspector(lastClone);
+  renderStage();
 }
 
 function placeSelectedSymbol() {
@@ -1148,12 +1561,33 @@ function placeSelectedSymbol() {
   if (!curLayer.frames[currentFrame].isKeyframe) insertKeyframe();
   const kf = curLayer.frames[currentFrame];
 
+  // Place a single symbol INSTANCE (children resolved live from the library)
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   sym.elements.forEach(el => {
-    const clone = JSON.parse(JSON.stringify(el));
-    clone.x = 200;
-    clone.y = 200;
-    kf.elements.push(clone);
+    const bb = elementBBox(el);
+    minX = Math.min(minX, bb.x);
+    maxX = Math.max(maxX, bb.x + bb.width);
+    minY = Math.min(minY, bb.y);
+    maxY = Math.max(maxY, bb.y + bb.height);
   });
+  const width = (maxX - minX) || 60;
+  const height = (maxY - minY) || 60;
+  const instance = makeElement({
+    type: 'symbol',
+    symbolName: sym.name,
+    x: 200 - width / 2,
+    y: 200 - height / 2,
+    width: width,
+    height: height,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+    alpha: 1,
+    visible: true,
+    name: '',
+    locked: false
+  });
+  kf.elements.push(instance);
   renderStage();
 }
 
@@ -1517,6 +1951,16 @@ function setupShortcuts() {
     } else if (e.key === 'F8') {
       e.preventDefault();
       promptConvertSymbol();
+    } else if ((e.ctrlKey || e.metaKey) && (e.key || '').toLowerCase() === 'g') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        ungroupSelection();
+      } else {
+        groupSelection();
+      }
+    } else if ((e.ctrlKey || e.metaKey) && (e.key || '').toLowerCase() === 'd') {
+      e.preventDefault();
+      duplicateSelection();
     } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       testMovie();
