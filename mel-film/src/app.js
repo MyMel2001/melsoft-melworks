@@ -193,19 +193,19 @@ function switchMfTab(tab) {
 }
 
 async function saveMfBundle() {
-  if (!currentVideo) {
-    alert('Open a video first.');
-    return;
-  }
   const format = document.getElementById('mf-bundle-format').value;
-  const projectName = (document.getElementById('mf-bundle-name') || {}).value || currentVideo.name;
-  const xml = '<?xml version="1.0"?><Project><Name>' + projectName + '</Name></Project>';
-  let buf;
-  if (format === 'prproj') {
-    buf = await MelFilmBundle.savePrproj(projectName, xml);
-  } else {
-    buf = await MelFilmBundle.saveAepx(projectName, xml);
-  }
+  const projectName = (document.getElementById('mf-bundle-name') || {}).value || 'MelFilm Project';
+  const comp = getMfComp();
+  const comps = [{
+    name: comp.name,
+    width: comp.width,
+    height: comp.height,
+    frameRate: comp.frameRate,
+    frameCount: comp.frameCount,
+    layers: comp.layers.map((l) => ({ id: l.id, name: l.name, source: l.source }))
+  }];
+  const xml = format === 'prproj' ? MelFilmBundle.buildPrprojXml(projectName, comps) : MelFilmBundle.buildAepxXml(projectName, comps);
+  const buf = format === 'prproj' ? await MelFilmBundle.savePrproj(projectName, xml) : await MelFilmBundle.saveAepx(projectName, xml);
   const blob = new Blob([buf], { type: 'application/zip' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
