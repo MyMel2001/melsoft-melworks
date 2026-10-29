@@ -169,6 +169,24 @@ body {
   color: #94a3b8;
 }
 
+.ms-track-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #334155;
+  font-size: 12px;
+}
+
+.ms-track-mute {
+  margin: 0 4px 0 0;
+}
+
+.ms-track-vol {
+  width: 60px;
+}
+
 .ms-chain-row {
   display: flex;
   justify-content: space-between;

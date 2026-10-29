@@ -29,6 +29,8 @@
     </div>
 
     <div class="ms-patterns">
+      <div class="ms-field">Swing <input type="range" id="ms-swing" min="0" max="100" value="0" oninput="updateSwingGui(this.value)"></div>
+      <div id="ms-tracks"></div>
       <div class="ms-field">Pattern
         <select id="ms-pattern-select" onchange="onPatternSelectGui(this.value)"></select>
       </div>

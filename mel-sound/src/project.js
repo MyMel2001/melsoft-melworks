@@ -67,6 +67,11 @@ class MelSoundProject {
     return this.kind;
   }
 
+  setSwing(swing) {
+    this.swing = Math.max(0, Math.min(1, Number(swing) || 0));
+    return this.swing;
+  }
+
   addTrack(name, kind) {
     const id = 'track-' + (++MelSoundProject.trackSeq);
     const track = {

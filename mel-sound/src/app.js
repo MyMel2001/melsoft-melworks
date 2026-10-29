@@ -22,8 +22,45 @@ function newProject() {
 function refreshMelSoundGui() {
   renderPatternsGui();
   renderChainGui();
+  renderTracksGui();
   const sel = document.getElementById('ms-pattern-select');
   renderStepGrid(sel && sel.value ? sel.value : (currentProject && currentProject.patterns.length > 0 ? currentProject.patterns[0].id : null));
+}
+
+function renderTracksGui() {
+  const el = document.getElementById('ms-tracks');
+  if (!el) return;
+  const tracks = (currentProject && currentProject.tracks) || [];
+  if (tracks.length === 0) {
+    el.innerHTML = '<div class="ms-grid-empty">No tracks.</div>';
+    return;
+  }
+  el.innerHTML = tracks.map((t) => {
+    const safeId = t.id.replace(/'/g, '');
+    const vol = t.volume === undefined ? 1 : t.volume;
+    return '<div class="ms-track-row">' +
+      '<span>' + (t.name || '') + '</span>' +
+      '<input type="checkbox" class="ms-track-mute" onchange="toggleTrackMuteGui(\'' + safeId + '\')" ' + (t.mute ? 'checked' : '') + '>' +
+      '<input type="number" class="ms-track-vol" id="ms-track-vol-' + safeId + '" value="' + vol + '" min="0" max="4" step="0.01" oninput="setTrackVolumeGui(\'' + safeId + '\', this.value)">' +
+      '</div>';
+  }).join('');
+}
+
+function updateSwingGui(val) {
+  if (!currentProject) newProject();
+  currentProject.setSwing(parseInt(val) || 0);
+}
+
+function setTrackVolumeGui(trackId, value) {
+  if (!currentProject) return;
+  currentProject.setTrackVolume(trackId, parseFloat(value) || 0);
+}
+
+function toggleTrackMuteGui(trackId) {
+  if (!currentProject) return;
+  const track = (currentProject.tracks || []).find((t) => t.id === trackId);
+  if (!track) return;
+  currentProject.setTrackMute(trackId, !track.mute);
 }
 
 function renderChainGui() {
