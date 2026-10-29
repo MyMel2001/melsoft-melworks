@@ -52,6 +52,23 @@
         <input type="number" id="mf-fps" value="30" min="1" max="240">
       </label>
       <button class="mf-btn" id="mf-btn-apply" onclick="exportVideo()">Start Render</button>
+      <label class="mf-field">Transition
+        <select id="mf-transition" class="mf-select" onchange="updateMfTransition(this.value)">
+          <option value="none">None</option>
+          <option value="fade">Fade</option>
+          <option value="fadeblack">Fade to Black</option>
+          <option value="fadewhite">Fade from White</option>
+          <option value="slideleft">Slide Left</option>
+          <option value="slideright">Slide Right</option>
+          <option value="slideup">Slide Up</option>
+          <option value="slidedown">Slide Down</option>
+          <option value="zoompan">Zoom</option>
+        </select>
+      </label>
+      <label class="mf-field">Transition Duration
+        <input type="number" id="mf-transition-duration" class="mf-num" min="0" max="10" step="0.1" value="1">
+      </label>
+      <button class="mf-btn" id="mf-btn-crossfade" onclick="crossfadeMfLayers()">Crossfade Layers</button>
       <label class="mf-field">Bundle Format
         <select id="mf-bundle-format" class="mf-select">
           <option value="aepx">AE Project (.aepx)</option>
@@ -73,7 +90,9 @@
       <div class="mf-comp-name" id="mf-comp-name">Comp</div>
       <button class="mf-btn" id="mf-btn-add-comp" onclick="createMfComp()">New Comp</button>
       <button class="mf-btn" id="mf-btn-add-layer" onclick="addMfLayer()">Add Layer</button>
+      <button class="mf-btn" id="mf-btn-add-layer-src" onclick="document.getElementById('mf-layer-src-input').click()">Add Layer from Media...</button>
       <div class="mf-layer-list" id="mf-layer-list">No layers in comp.</div>
+      <input type="file" id="mf-layer-src-input" accept="video/*,audio/*,image/*" style="display:none" onchange="onMfLayerSource(event)">
 
       <div class="mf-panel-title">Layer Tween</div>
       <label class="mf-field">Layer

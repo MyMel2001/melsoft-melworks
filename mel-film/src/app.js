@@ -2,6 +2,7 @@
 const { MelFfmpeg } = require('./ffmpeg');
 const { MelFilmBundle } = require('./bundle');
 const { MelFilmComp } = require('./comp');
+const { getTransition, XFADE_TRANSITIONS } = require('./transitions');
 
 let currentVideo = null; // { name, path, url }
 let currentComp = null;
@@ -50,6 +51,58 @@ async function capturePoster() {
   const outputPath = '/tmp/mel-film-poster-' + Date.now() + '.png';
   await MelFfmpeg.capturePoster({ inputPath: currentVideo.path, outputPath, timeSeconds: 1 });
   alert('Poster saved: ' + outputPath);
+}
+
+function updateMfTransition(value) {
+  const el = document.getElementById('mf-transition');
+  if (el) el.value = value || 'none';
+}
+
+function updateMfTransitionDuration(value) {
+  const el = document.getElementById('mf-transition-duration');
+  if (el) el.value = String(value ?? 1);
+}
+
+function addMfLayerWithSource(source) {
+  const comp = getMfComp();
+  comp.addLayer('Layer ' + (comp.layers.length + 1), source);
+  renderMfComps();
+}
+
+function onMfLayerSource(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const source = file.path || '';
+  if (!source) { alert('Layer source requires a file system path.'); return; }
+  addMfLayerWithSource(source);
+}
+
+async function crossfadeMfLayers() {
+  const comp = getMfComp();
+  const sources = comp.layers.map((l) => ({ id: l.id, name: l.name, path: l.source })).filter((x) => x.path);
+  if (sources.length < 2) {
+    alert('Add two layers with source media first.');
+    return;
+  }
+  const transition = getMfTransition();
+  if (transition === 'none') { alert('Pick a transition before crossfading.'); return; }
+  const tr = getTransition(transition);
+  const duration = parseFloat(document.getElementById('mf-transition-duration').value) || 1;
+  const outputPath = '/tmp/mel-film-xfade-' + Date.now() + '.mp4';
+  try {
+    const res = await MelFfmpeg.crossfade({
+      inputs: [
+        { inputPath: sources[0].path, duration: duration },
+        { inputPath: sources[1].path, duration: duration }
+      ],
+      outputPath,
+      transition: tr.filter,
+      duration
+    });
+    alert('Crossfade complete: ' + outputPath + ' (' + (res && res.code) + ')');
+  } catch (err) {
+    alert('Crossfade failed: ' + (err && err.message ? err.message : err));
+  }
 }
 
 function updateMfPreset(value) {
@@ -140,7 +193,7 @@ function renderMfComps() {
   if (comp.layers.length === 0) {
     listEl.innerHTML = '<div class="mf-layer-empty">No layers in comp.</div>';
   } else {
-    listEl.innerHTML = comp.layers.map((l) => '<div class="mf-layer-row">' + l.name + ' <button class="mf-layer-remove" onclick="removeMfLayer(\'' + l.id + '\')">x</button></div>').join('');
+    listEl.innerHTML = comp.layers.map((l) => '<div class="mf-layer-row">' + l.name + (l.source ? ' [' + l.source + ']' : '') + ' <button class="mf-layer-remove" onclick="removeMfLayer(\'' + l.id + '\')">x</button></div>').join('');
   }
   renderMfTweenPanel();
 }
