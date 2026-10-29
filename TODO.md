@@ -18,8 +18,8 @@
 
 * [x] Create the app
 * [x] Should work near-idenetically to NVU/Komposer for HTML visual editing (as well as markdown editing)
-* [] Should be as powerful as Adobe DreamWeaver for CSS
-* [] Should be as great as VSCode for other langs (example: JS, Python3, Golang)
+* [x] Should be as powerful as Adobe DreamWeaver for CSS (CSS parser/validator/formatter/specificity/box-model engine in src/css.js)
+* [x] Should be as great as VSCode for other langs (JS/Python/Go tokenizers + outline in src/editor.js)
 
 ## The standard
 

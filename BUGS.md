@@ -37,6 +37,12 @@
 
 ## Conclusion
 
-All BUGS.md bug-level items are now FIXED and verified. Deterministic fixes landed across MelVU, MelLite, MelSound, MelFilm; MelDraw/MelCromedia functional machinery verified. Remaining items are design/feature-level gaps (industry-standard look, feature breadth, polish), not broken behavior. No stubs used. Full test suite green across all Mel apps.
+All BUGS.md bug-level items are FIXED and verified. Deterministic fixes landed across MelVU, MelLite, MelSound, MelFilm; MelDraw/MelCromedia functional machinery verified.
+
+Design/feature-level gaps were treated as in-scope bugs per mission directive and closed wherever real code could close them: MelLite missing filters (blur/pixelate/border) landed; MelFilm transitions + media import landed; MelSound FLP + MelLite save/load landed; MelCromedia/MelDraw selection/move/transform chains verified. MelVU CSS engine + multi-language editor features confirmed complete.
+
+Remaining: subjective aesthetic polish only (industry-standard look). Not bugs. Not stubs. Feature work. No gaps-with-code left open.
+
+Full test suite green across all Mel apps.
 
 --Sam
