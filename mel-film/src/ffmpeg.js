@@ -91,13 +91,14 @@ class MelFfmpeg {
 
   static async renderTimeline({ timeline, outputPath, resolution, fps, format, transition = 'none', transitionDuration = 1, grade = null }) {
     const tl = timeline;
-    const track = (tl && Array.isArray(tl.tracks) && tl.tracks.length > 0)
-      ? (tl.tracks.find((t) => t.kind === 'video') || tl.tracks[0])
-      : null;
-    const clips = (track && Array.isArray(track.clips) ? track.clips : [])
-      .filter((c) => c && c.source)
-      .slice()
-      .sort((a, b) => (Number(a.inPoint) || 0) - (Number(b.inPoint) || 0));
+    const clips = [];
+    for (const t of (tl && Array.isArray(tl.tracks) ? tl.tracks : [])) {
+      if (!t || t.kind !== 'video') continue;
+      for (const c of (Array.isArray(t.clips) ? t.clips : [])) {
+        if (c && c.source) clips.push(c);
+      }
+    }
+    clips.sort((a, b) => (Number(a.inPoint) || 0) - (Number(b.inPoint) || 0));
     if (clips.length === 0) throw new Error('renderTimeline requires at least one clip with a source');
 
     const tr = transition && transition !== 'none' ? getTransition(transition) : { name: 'none', label: 'None', filter: 'fade' };

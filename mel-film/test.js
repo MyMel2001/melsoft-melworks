@@ -211,6 +211,17 @@ async function runTests() {
   const tlRes = await MelFfmpeg.renderTimeline({ timeline, outputPath: tlOutPath, resolution: '320x240', fps: 10, format: 'mp4', transition: 'fade', transitionDuration: 0.5 });
   assert(fs.existsSync(tlOutPath) && fs.statSync(tlOutPath).size > 0, 'FFMPEG timeline render produced output');
 
+  // Multi-track timeline render (clips from multiple video tracks)
+  const multiTrack = MelFilmTimeline.create('Multi', 10);
+  const mTrackA = multiTrack.addTrack('Video A', 'video');
+  multiTrack.addClip(mTrackA.id, srcPath, 0, 10);
+  const mTrackB = multiTrack.addTrack('Video B', 'video');
+  multiTrack.addClip(mTrackB.id, rightPath, 0, 10);
+  const multiOutPath = path.join(os.tmpdir(), 'mel-film-multitrack-out.mp4');
+  const multiRes = await MelFfmpeg.renderTimeline({ timeline: multiTrack, outputPath: multiOutPath, resolution: '320x240', fps: 10, format: 'mp4', transition: 'fade', transitionDuration: 0.5 });
+  assert(fs.existsSync(multiOutPath) && fs.statSync(multiOutPath).size > 0, 'FFMPEG multi-track timeline render produced output');
+  console.log('✓ MelFilm multi-track timeline render validated');
+
   const gradeOutPath = path.join(os.tmpdir(), 'mel-film-grade-out.mp4');
   const gradeRes = await MelFfmpeg.applyGrade({ inputPath: srcPath, outputPath: gradeOutPath, grade: { brightness: 0.05, contrast: 1.2, saturation: 0.8, hue: 10 } });
   assert(fs.existsSync(gradeOutPath) && fs.statSync(gradeOutPath).size > 0, 'FFMPEG color grade produced output');
