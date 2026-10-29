@@ -69,6 +69,12 @@
         <input type="number" id="mf-transition-duration" class="mf-num" min="0" max="10" step="0.1" value="1">
       </label>
       <button class="mf-btn" id="mf-btn-crossfade" onclick="crossfadeMfLayers()">Crossfade Layers</button>
+      <div class="mf-panel-title">Color Grade</div>
+      <label class="mf-field">Brightness <input type="number" id="mf-grade-brightness" class="mf-num" step="0.01" value="0"></label>
+      <label class="mf-field">Contrast <input type="number" id="mf-grade-contrast" class="mf-num" step="0.01" value="1"></label>
+      <label class="mf-field">Saturation <input type="number" id="mf-grade-saturation" class="mf-num" step="0.01" value="1"></label>
+      <label class="mf-field">Hue <input type="number" id="mf-grade-hue" class="mf-num" step="1" value="0"></label>
+      <button class="mf-btn" id="mf-btn-export-timeline" onclick="exportMfTimeline()">Render Timeline</button>
       <label class="mf-field">Bundle Format
         <select id="mf-bundle-format" class="mf-select">
           <option value="aepx">AE Project (.aepx)</option>

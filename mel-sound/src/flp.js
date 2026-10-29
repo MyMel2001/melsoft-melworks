@@ -124,6 +124,22 @@ class MelFlsWriter {
     return this;
   }
 
+  addInstrument(instrument) {
+    const state = JSON.stringify({
+      name: (instrument && instrument.name) || 'Instrument',
+      type: (instrument && instrument.type) || 'synth',
+      params: (instrument && instrument.params) || { cutoff: 2000, resonance: 1, level: 0.8 }
+    });
+    const bytes = encodeTextBytes(state);
+    const varint = encodeVarint(bytes.length);
+    const ev = new Uint8Array(1 + varint.length + bytes.length);
+    ev[0] = EVENT_PLUGIN;
+    ev.set(varint, 1);
+    ev.set(bytes, 1 + varint.length);
+    this.events.push(ev);
+    return this;
+  }
+
   addPattern(pattern) {
     const p = pattern || {};
     const steps = p.steps || {};
@@ -214,7 +230,18 @@ class MelFlsReader {
         const payload = stream.subarray(pos, pos + v.value);
         pos += v.value;
         if (id === EVENT_PLUGIN) {
-          result.pluginStates.push({ blobId: result.pluginStates.length, bytes: Array.from(payload) });
+          const instrument = { id: result.pluginStates.length, name: '', type: 'synth', params: { cutoff: 2000, resonance: 1, level: 0.8 } };
+          try {
+            const decoded = new TextDecoder ? new TextDecoder().decode(payload) : '';
+            const parsedState = JSON.parse(decoded);
+            instrument.id = parsedState.id !== undefined ? parsedState.id : instrument.id;
+            instrument.name = parsedState.name || instrument.name;
+            instrument.type = parsedState.type || instrument.type;
+            instrument.params = parsedState.params || instrument.params;
+          } catch (e) {
+            instrument.name = new TextDecoder ? new TextDecoder().decode(payload) : '';
+          }
+          result.pluginStates.push(instrument);
         } else if (id === EVENT_PATTERN) {
           result.patterns.push(MelFlsReader.parsePatternPayload(payload));
         } else {

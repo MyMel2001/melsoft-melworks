@@ -27,8 +27,8 @@
 
 ## MelFilm
 
-* Is not a feature-complete NLE (a-la KDenLive/Davinci Resolve/Premiere Pro) (A huge stub?)
+* [FIXED] Giant stub - now timeline-based NLE (comp/layer stack, track clips, FFMPEG xfade timeline render, color grade, Adobe .aepx/.prproj bundle XML builders).
 
 ## MelSound
 
-* 100% just a giant stub. To quote a toy cowboy from that one movie: "it's falling, with style."
+* [FIXED] Giant stub - now FL Studio-style DAW engine (patterns, pattern chain, FLP instrument events, master-gain WAV render, play/stop sequence).

@@ -89,6 +89,79 @@ class MelFfmpeg {
     return await runFfmpeg(args);
   }
 
+  static async renderTimeline({ timeline, outputPath, resolution, fps, format, transition = 'none', transitionDuration = 1, grade = null }) {
+    const tl = timeline;
+    const track = (tl && Array.isArray(tl.tracks) && tl.tracks.length > 0)
+      ? (tl.tracks.find((t) => t.kind === 'video') || tl.tracks[0])
+      : null;
+    const clips = (track && Array.isArray(track.clips) ? track.clips : [])
+      .filter((c) => c && c.source)
+      .slice()
+      .sort((a, b) => (Number(a.inPoint) || 0) - (Number(b.inPoint) || 0));
+    if (clips.length === 0) throw new Error('renderTimeline requires at least one clip with a source');
+
+    const tr = transition && transition !== 'none' ? getTransition(transition) : { name: 'none', label: 'None', filter: 'fade' };
+    const fpsNum = Number(fps) > 0 ? Number(fps) : (tl && tl.fps) || 24;
+    let size = '1920x1080';
+    if (resolution) {
+      const [w, h] = String(resolution).toLowerCase().split('x').map((n) => parseInt(n, 10) || 0);
+      if (w > 0 && h > 0) size = w + 'x' + h;
+    }
+    const durs = clips.map((c) => Math.max(0.04, ((Number(c.outPoint) || 0) - (Number(c.inPoint) || 0)) / fpsNum));
+    const T = Math.max(0, Number(transitionDuration) || 0);
+
+    const args = ['-y'];
+    clips.forEach((c) => args.push('-i', c.source));
+    const segments = [];
+    clips.forEach((c, i) => { segments.push('[' + i + ':v]scale=' + size + '[v' + i + ']'); });
+    let finalLabel = '[v0]';
+    if (clips.length > 1) {
+      let cur = '[v0]';
+      let dur = durs[0];
+      for (let i = 1; i < clips.length; i++) {
+        const t = Math.min(T, dur, durs[i]);
+        const out = '[x' + (i - 1) + ']';
+        segments.push(cur + '[v' + i + ']xfade=transition=' + tr.filter + ':duration=' + fmtNum(t) + ':offset=' + fmtNum(Math.max(0, dur - t)) + '[' + out.slice(1, -1) + ']');
+        dur = dur + durs[i] - t;
+        cur = out;
+      }
+      finalLabel = cur;
+    } else {
+      segments.push(finalLabel);
+    }
+    const gradeVals = grade || {};
+    const hasGrade = Number(gradeVals.brightness) !== undefined || Number(gradeVals.contrast) !== undefined || Number(gradeVals.saturation) !== undefined || Number(gradeVals.hue) !== undefined;
+    if (hasGrade) {
+      const parts = ['eq=brightness=' + fmtNum(Number(gradeVals.brightness) || 0) + ':contrast=' + fmtNum(Number(gradeVals.contrast) || 1) + ':saturation=' + fmtNum(Number(gradeVals.saturation) === undefined ? 1 : Number(gradeVals.saturation))];
+      if (Number(gradeVals.hue) !== undefined) parts.push('hue=h=' + fmtNum(Number(gradeVals.hue) || 0));
+      segments.push(finalLabel + parts.join(',') + '[vout]');
+      finalLabel = '[vout]';
+    }
+    args.push('-filter_complex', segments.join(';') + ';');
+    args.push('-map', finalLabel);
+    args.push('-map', '0:a?');
+    if (fps) args.push('-r', String(fps));
+    args.push('-c:v', 'libx264');
+    args.push('-pix_fmt', 'yuv420p');
+    args.push('-c:a', 'aac');
+    args.push('-b:a', '128k');
+    args.push('-f', format || 'mp4');
+    args.push(outputPath);
+    return await runFfmpeg(args);
+  }
+
+  static async applyGrade({ inputPath, outputPath, grade = {} }) {
+    const brightness = Number(grade.brightness) || 0;
+    const contrast = Number(grade.contrast);
+    const saturation = Number(grade.saturation);
+    const hue = Number(grade.hue);
+    const parts = ['eq=brightness=' + fmtNum(brightness) + ':contrast=' + fmtNum(Number.isFinite(contrast) ? contrast : 1) + ':saturation=' + fmtNum(Number.isFinite(saturation) ? saturation : 1)];
+    if (Number.isFinite(hue) && hue !== 0) parts.push('hue=h=' + fmtNum(hue));
+    const filter = parts.join(',');
+    const args = ['-y', '-i', inputPath, '-vf', filter, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', outputPath];
+    return await runFfmpeg(args);
+  }
+
   static async renderTween({ inputPath, outputPath, keyframes, frameRate = 24, fps, width, height }) {
     if (!Array.isArray(keyframes) || keyframes.length === 0) {
       throw new Error('renderTween requires a non-empty keyframes array');

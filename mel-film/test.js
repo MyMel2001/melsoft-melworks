@@ -192,6 +192,38 @@ async function runTests() {
   assert.ok(piece.includes('if(between(t,0,1)'), 'MelFilm toFfmpegExpr builds between(t,...) from frames');
   console.log('✓ MelFilm comp keyframes + FFMPEG tween expressions validated');
 
+  // 12. Test MelFilm timeline model (NLE clip editing timeline)
+  const { MelFilmTimeline } = require('./src/timeline');
+  const timeline = MelFilmTimeline.create('Main', 10);
+  const vTrack = timeline.addTrack('Video', 'video');
+  const tlClip1 = timeline.addClip(vTrack.id, srcPath, 0, 10);
+  const tlClip2 = timeline.addClip(vTrack.id, rightPath, 0, 10);
+  assert.strictEqual(timeline.getClips(vTrack.id).length, 2, 'MelFilm timeline adds clips');
+  assert.strictEqual(timeline.setClipRange(vTrack.id, tlClip2.id, 0, 5), true, 'MelFilm timeline trims clip range');
+  assert.strictEqual(timeline.computeDuration(), 1, 'MelFilm timeline duration seconds');
+  const tlBack = MelFilmTimeline.fromJSON(timeline.toJSON());
+  assert.strictEqual(tlBack.getClips(vTrack.id).length, 2, 'MelFilm timeline JSON roundtrips clips');
+  let tlErr = false;
+  try { await MelFfmpeg.renderTimeline({ timeline: MelFilmTimeline.create('Empty'), outputPath: outPath, format: 'mp4' }); } catch (e) { tlErr = true; }
+  assert.ok(tlErr, 'MelFilm renderTimeline rejects empty timeline');
+
+  const tlOutPath = path.join(os.tmpdir(), 'mel-film-timeline-out.mp4');
+  const tlRes = await MelFfmpeg.renderTimeline({ timeline, outputPath: tlOutPath, resolution: '320x240', fps: 10, format: 'mp4', transition: 'fade', transitionDuration: 0.5 });
+  assert(fs.existsSync(tlOutPath) && fs.statSync(tlOutPath).size > 0, 'FFMPEG timeline render produced output');
+
+  const gradeOutPath = path.join(os.tmpdir(), 'mel-film-grade-out.mp4');
+  const gradeRes = await MelFfmpeg.applyGrade({ inputPath: srcPath, outputPath: gradeOutPath, grade: { brightness: 0.05, contrast: 1.2, saturation: 0.8, hue: 10 } });
+  assert(fs.existsSync(gradeOutPath) && fs.statSync(gradeOutPath).size > 0, 'FFMPEG color grade produced output');
+  console.log('✓ MelFilm timeline render + color grade validated');
+
+  // 13. Test MelFilm Adobe project XML builders
+  const aepxXmlBuilt = MelFilmBundle.buildAepxXml('MyFilm', [{ name: 'Comp1', width: 1920, height: 1080, frameRate: 24, layers: [{ id: 'layer-1', name: 'Background', source: 'bg.mp4' }] }]);
+  assert.ok(aepxXmlBuilt.includes('Comp1'), 'MelFilm AEPX XML builder emits composition');
+  assert.ok(aepxXmlBuilt.includes('bg.mp4'), 'MelFilm AEPX XML builder emits layer source');
+  const prprojXmlBuilt = MelFilmBundle.buildPrprojXml('MyFilm', [{ name: 'Comp1', width: 1920, height: 1080, frameRate: 24, frameCount: 48, layers: [{ id: 'layer-1', name: 'Background', source: 'bg.mp4' }] }]);
+  assert.ok(prprojXmlBuilt.includes('Comp1'), 'MelFilm PRPROJ XML builder emits sequence');
+  console.log('✓ MelFilm Adobe project XML builders validated');
+
   // 11. Test MelFilm FFMPEG tween render (real renderTween on 2s lavfi clip)
   const tweenOutPath = path.join(os.tmpdir(), 'mel-film-tween-out.mp4');
   let tweenErr = null;

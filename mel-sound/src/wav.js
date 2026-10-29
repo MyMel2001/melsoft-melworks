@@ -32,14 +32,18 @@ function renderSequenceWav(project, sampleRate = 44100) {
   const totalSamples = Math.max(1, Math.ceil(seq.duration * sampleRate));
   const clean = new Float32Array(totalSamples);
   const noteToFreq = require('./audio').noteToFrequency;
+  const masterGain = (project && project.masterGain) ? project.masterGain : 1;
+  const master = Math.max(0, Math.min(10, masterGain));
   for (const e of seq.events) {
     const startSample = Math.floor(e.time * sampleRate);
     const durSamples = Math.max(1, Math.floor(e.duration * sampleRate));
     const freq = noteToFreq(e.midi);
-    const vol = Math.max(0, Math.min(1, e.volume === undefined ? 1 : e.volume)) * 0.8;
+    const vol = Math.max(0, Math.min(1, e.volume === undefined ? 1 : e.volume)) * 0.8 * master;
+    const release = Math.max(1, Math.floor(0.05 * sampleRate));
     for (let s = 0; s < durSamples && startSample + s < totalSamples; s++) {
       const t = s / sampleRate;
-      clean[startSample + s] += vol * Math.sin(2 * Math.PI * freq * t);
+      const env = Math.min(1, (durSamples - s) / release);
+      clean[startSample + s] += vol * env * (Math.sin(2 * Math.PI * freq * t) + 0.5 * Math.sin(2 * Math.PI * freq * 2 * t) + 0.25 * Math.sin(2 * Math.PI * freq * 3 * t));
     }
   }
   return writeWav(clean, sampleRate);

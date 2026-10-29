@@ -2,6 +2,7 @@
 const { MelSoundProject } = require('./project');
 const { MelSoundPlayer } = require('./audio');
 const { MelFlsWriter, MelFlsReader } = require('./flp');
+const { saveWav: saveMelSoundWav } = require('./wav');
 
 let currentProject = null;
 let player = new MelSoundPlayer();
@@ -101,6 +102,7 @@ function saveFls() {
   writer.addTempo(currentProject.bpm);
   writer.addKind(currentProject.kind);
   writer.addName('MelSound Project');
+  currentProject.instruments.forEach((i) => writer.addInstrument(i));
   currentProject.patterns.forEach((p) => writer.addPattern(p));
   const buf = writer.build();
   const bin = Array.from(buf, (b) => String.fromCharCode(b)).join('');
@@ -125,14 +127,36 @@ function openFls(event) {
       name: p.name,
       steps: p.steps || {}
     }));
+    const restoredInstruments = (parsed.pluginStates || []).map((i) => ({
+      id: i.id,
+      name: i.name,
+      type: i.type,
+      params: i.params || {}
+    }));
     currentProject = new MelSoundProject({
       bpm: parsed.bpm,
       kind: parsed.kind,
+      instruments: restoredInstruments,
       patterns: restoredPatterns,
       patternChain: []
     });
-    alert('FLP loaded: bpm=' + parsed.bpm + ' kind=' + parsed.kind + ' name=' + parsed.name + ' patterns=' + restoredPatterns.length);
+    alert('FLP loaded: bpm=' + parsed.bpm + ' kind=' + parsed.kind + ' name=' + parsed.name + ' patterns=' + restoredPatterns.length + ' instruments=' + restoredInstruments.length);
     updateStatus();
   };
   reader.readAsArrayBuffer(file);
+}
+
+function saveWav() {
+  if (!currentProject) {
+    alert('Create or open a project first.');
+    return;
+  }
+  const wavOutPath = '/tmp/mel-sound-export.wav';
+  const wavWritten = saveMelSoundWav(currentProject, wavOutPath, 44100);
+  alert('WAV exported: ' + wavOutPath + ' (' + wavWritten.length + ' bytes)');
+}
+
+function addPattern() {
+  if (!currentProject) newProject();
+  return currentProject.addPattern('Pattern ' + (currentProject.patterns.length + 1));
 }

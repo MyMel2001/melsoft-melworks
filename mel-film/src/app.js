@@ -2,6 +2,7 @@
 const { MelFfmpeg } = require('./ffmpeg');
 const { MelFilmBundle } = require('./bundle');
 const { MelFilmComp } = require('./comp');
+const { MelFilmTimeline } = require('./timeline');
 const { getTransition, XFADE_TRANSITIONS } = require('./transitions');
 
 let currentVideo = null; // { name, path, url }
@@ -42,6 +43,57 @@ async function exportVideo() {
     alert('Render failed: ' + err.message);
   }
 }
+
+function getMfTimeline() {
+  const comp = getMfComp();
+  const timeline = MelFilmTimeline.create(comp.name, comp.frameRate);
+  const track = timeline.addTrack('Video', 'video');
+  comp.layers.forEach((l) => {
+    const lastFrame = (l.keyframes || []).reduce((m, k) => Math.max(m, Number(k.frame) || 0), 0);
+    timeline.addClip(track.id, l.source, 0, lastFrame);
+  });
+  return timeline;
+}
+
+function readMfGrade() {
+  const brightnessEl = document.getElementById('mf-grade-brightness');
+  const contrastEl = document.getElementById('mf-grade-contrast');
+  const saturationEl = document.getElementById('mf-grade-saturation');
+  const hueEl = document.getElementById('mf-grade-hue');
+  const grade = {};
+  const brightness = brightnessEl ? parseFloat(brightnessEl.value) : NaN;
+  const contrast = contrastEl ? parseFloat(contrastEl.value) : NaN;
+  const saturation = saturationEl ? parseFloat(saturationEl.value) : NaN;
+  const hue = hueEl ? parseFloat(hueEl.value) : NaN;
+  if (Number.isFinite(brightness)) grade.brightness = brightness;
+  if (Number.isFinite(contrast)) grade.contrast = contrast;
+  if (Number.isFinite(saturation)) grade.saturation = saturation;
+  if (Number.isFinite(hue)) grade.hue = hue;
+  return grade;
+}
+
+async function exportMfTimeline() {
+  const comp = getMfComp();
+  const timeline = getMfTimeline();
+  const format = document.getElementById('mf-format').value;
+  const outputPath = '/tmp/mel-film-timeline-' + Date.now() + '.' + format;
+  try {
+    const res = await MelFfmpeg.renderTimeline({
+      timeline,
+      outputPath,
+      resolution: document.getElementById('mf-resolution').value,
+      fps: parseInt(document.getElementById('mf-fps').value) || comp.frameRate,
+      format: format,
+      transition: document.getElementById('mf-transition').value,
+      transitionDuration: parseFloat(document.getElementById('mf-transition-duration').value) || 1,
+      grade: readMfGrade()
+    });
+    alert('Timeline render complete: ' + outputPath + ' (' + res.code + ')');
+  } catch (err) {
+    alert('Timeline render failed: ' + (err && err.message ? err.message : err));
+  }
+}
+
 
 async function capturePoster() {
   if (!currentVideo) {

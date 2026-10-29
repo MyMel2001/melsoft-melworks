@@ -175,6 +175,37 @@ function runTests() {
   assert.strictEqual(wavWritten.length, wavBuf.length, 'MelSound WAV save returns same buffer');
   console.log('✓ MelSound WAV export validated');
 
+  // 6. Test MelSound WAV render applies master gain
+  function wavPeak(buf) {
+    let peak = 0;
+    for (let i = 44; i + 2 < buf.length; i += 2) {
+      const v = Math.abs(buf.readInt16LE(i) / 32768);
+      if (v > peak) peak = v;
+    }
+    return peak;
+  }
+  const gainProject = new MelSoundProject({ bpm: 140, masterGain: 1 });
+  const gainTrack = gainProject.addTrack('Bass');
+  gainProject.setStep(gainTrack.id, 0, 60);
+  const gainWav = renderSequenceWav(gainProject, 44100);
+  const quietProject = new MelSoundProject({ bpm: 140, masterGain: 0.5 });
+  const quietTrack = quietProject.addTrack('Bass');
+  quietProject.setStep(quietTrack.id, 0, 60);
+  const quietWav = renderSequenceWav(quietProject, 44100);
+  const loudPeak = wavPeak(gainWav);
+  const quietPeak = wavPeak(quietWav);
+  assert.ok(quietPeak > 0 && quietPeak < loudPeak, 'MelSound WAV render applies master gain');
+
+  // 7. Test MelSound FLP instrument event roundtrip
+  const instWriter = new MelFlsWriter();
+  instWriter.addTempo(140);
+  instWriter.addKind('vocal');
+  instWriter.addInstrument({ id: 'inst-1', name: 'Sythesizer V', type: 'vst', params: { cutoff: 2000, resonance: 1, level: 0.8 } });
+  const instParsed = MelFlsReader.parse(instWriter.build());
+  assert.strictEqual(instParsed.pluginStates.length, 1, 'MelSound FLP instrument event roundtrips');
+  assert.strictEqual(instParsed.pluginStates[0].name, 'Sythesizer V', 'MelSound FLP instrument name preserved');
+  assert.strictEqual(instParsed.pluginStates[0].type, 'vst', 'MelSound FLP instrument type preserved');
+
   console.log('\nALL MELSOUND TESTS PASSED SUCCESSFULLY!\n');
 }
 

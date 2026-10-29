@@ -23,6 +23,22 @@ class MelFilmBundle {
     return content;
   }
 
+  static buildAepxXml(name, comps) {
+    const compositions = (Array.isArray(comps) ? comps : []).map((c) => {
+      const layers = (c.layers || []).map((l) => '<Layer id="' + (l.id || '') + '" name="' + (l.name || '') + '">' + (l.source ? '<Source filepath="' + l.source + '"/>' : '') + '</Layer>');
+      return '<Composition name="' + (c.name || '') + '" width="' + (c.width || 1920) + '" height="' + (c.height || 1080) + '" frameRate="' + (c.frameRate || 24) + '">' + layers.join('') + '</Composition>';
+    }).join('');
+    return '<?xml version="1.0"?><Project><Name>' + (name || '') + '</Name><Compositions>' + compositions + '</Compositions></Project>';
+  }
+
+  static buildPrprojXml(name, comps) {
+    const sequences = (Array.isArray(comps) ? comps : []).map((c) => {
+      const layers = (c.layers || []).map((l) => '<Layer name="' + (l.name || '') + '">' + (l.source ? '<Source path="' + l.source + '"/>' : '') + '</Layer>');
+      return '<Sequence name="' + (c.name || '') + '" duration="' + (((Number(c.frameCount) || 0)) / (Number(c.frameRate) || 24)) + 's">' + layers.join('') + '</Sequence>';
+    }).join('');
+    return '<?xml version="1.0"?><Project><Name>' + (name || '') + '</Name><Sequences>' + sequences + '</Sequences></Project>';
+  }
+
   static async loadBundle(buffer) {
     const zip = await JSZip.loadAsync(buffer);
     const files = {};
