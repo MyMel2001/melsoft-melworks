@@ -23,7 +23,9 @@ function createWindow() {
       label: 'File',
       submenu: [
         { label: 'Open Image...', accelerator: 'CmdOrCtrl+O', click: () => mainWindow.webContents.executeJavaScript('triggerOpen()') },
-        { label: 'Export PNG...', accelerator: 'CmdOrCtrl+Shift+E', click: () => mainWindow.webContents.executeJavaScript('exportPng()') },
+        { label: 'Open Project...', click: () => mainWindow.webContents.executeJavaScript("document.getElementById('ml-project-input').click()") },
+        { label: 'Save Project...', accelerator: 'CmdOrCtrl+Shift+S', click: () => mainWindow.webContents.executeJavaScript('saveProject()') },
+        { label: 'Export PNG...', accelerator: 'CmdOrCtrl+Shift+E', click: () => mainWindow.webContents.executeJavaScript('exportStandardImage()') },
         { type: 'separator' },
         { label: 'Exit', role: 'quit' }
       ]

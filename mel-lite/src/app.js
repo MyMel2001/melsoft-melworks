@@ -80,17 +80,6 @@ function handleImageFile(event) {
   reader.readAsDataURL(file);
 }
 
-function applyAdjustments() {
-  if (!currentImage) {
-    alert('Open an image first.');
-    return;
-  }
-  const outImg = MelLiteFilterEngine.apply(currentImage, adjustments);
-  currentImage = { width: outImg.width, height: outImg.height, data: outImg.data };
-  renderImage();
-  updateStatus();
-}
-
 function resetAdjustments() {
   adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
   updateSliders();
@@ -192,6 +181,52 @@ async function importRawDng(event) {
 
 function triggerOpen() {
   document.getElementById('ml-file-input').click();
+}
+
+function saveProject() {
+  if (!currentImage) { alert('Open an image first.'); return; }
+  const data = Array.from(currentImage.data, (v) => v & 0xff).join(',');
+  const payload = {
+    app: 'mel-lite',
+    version: 1,
+    image: { width: currentImage.width, height: currentImage.height, data: data },
+    adjustments: adjustments,
+    brush: brush
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mel-lite-project.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function loadProject(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      const img = payload.image;
+      if (!img || !img.data) throw new Error('Project file missing image data');
+      const width = parseInt(img.width, 10) || 0;
+      const height = parseInt(img.height, 10) || 0;
+      const data = new Uint8ClampedArray(width * height * 4);
+      const parts = String(img.data).split(',');
+      for (let i = 0; i < Math.min(parts.length, data.length); i++) data[i] = parseInt(parts[i], 10) || 0;
+      currentImage = { width, height, data };
+      adjustments = Object.assign({ exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null }, payload.adjustments || {});
+      brush = Object.assign({ x: 0, y: 0, size: 20 }, payload.brush || {});
+      updateSliders();
+      renderImage();
+      updateStatus();
+    } catch (err) {
+      alert('Failed to load MelLite project: ' + (err && err.message ? err.message : err));
+    }
+  };
+  reader.readAsText(file);
 }
 
 function exportStandardImage() {
