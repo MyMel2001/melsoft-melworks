@@ -18,6 +18,7 @@
     <button class="mf-tab" id="mf-tab-edit" onclick="switchMfTab('edit')">Edit</button>
     <button class="mf-tab" id="mf-tab-render" onclick="switchMfTab('render')">Render</button>
     <button class="mf-tab" id="mf-tab-comps" onclick="switchMfTab('comps')">Comps</button>
+    <button class="mf-tab" id="mf-tab-timeline" onclick="switchMfTab('timeline')">Timeline</button>
   </nav>
 
   <main class="mf-workspace" id="mf-panel-edit">
@@ -135,6 +136,14 @@
       </div>
       <div class="mf-keyframe-list" id="mf-keyframe-list"></div>
       <canvas id="mf-tween-canvas" class="mf-tween-canvas" width="640" height="360"></canvas>
+    </div>
+  </main>
+
+  <main class="mf-workspace mf-hidden" id="mf-panel-timeline">
+    <div class="mf-timeline-panel">
+      <div class="mf-panel-title">Timeline</div>
+      <div class="mf-timeline-meta" id="mf-timeline-meta">No comp selected.</div>
+      <div class="mf-timeline-list" id="mf-timeline-list">No timeline.</div>
     </div>
   </main>
 

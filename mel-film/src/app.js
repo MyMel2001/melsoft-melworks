@@ -187,7 +187,9 @@ function switchMfTab(tab) {
   document.getElementById('mf-panel-edit').classList.toggle('mf-hidden', tab !== 'edit');
   document.getElementById('mf-panel-render').classList.toggle('mf-hidden', tab !== 'render');
   document.getElementById('mf-panel-comps').classList.toggle('mf-hidden', tab !== 'comps');
+  document.getElementById('mf-panel-timeline').classList.toggle('mf-hidden', tab !== 'timeline');
   if (tab === 'comps') renderMfComps();
+  if (tab === 'timeline') renderMfTimeline();
 }
 
 async function saveMfBundle() {
@@ -260,6 +262,63 @@ function renderMfComps() {
     listEl.innerHTML = comp.layers.map((l) => '<div class="mf-layer-row">' + l.name + (l.source ? ' [' + l.source + ']' : '') + ' <button class="mf-layer-remove" onclick="removeMfLayer(\'' + l.id + '\')">x</button></div>').join('');
   }
   renderMfTweenPanel();
+  renderMfTimeline();
+}
+
+// --- MelFilm timeline (NLE track view over comp layers) ---
+
+function mfLayerRange(layer) {
+  const comp = getMfComp();
+  const kfs = (layer && Array.isArray(layer.keyframes)) ? layer.keyframes : [];
+  let inF = 0;
+  let outF = comp.frameCount > 0 ? comp.frameCount : 24;
+  if (kfs.length > 0) {
+    inF = Math.min(...kfs.map((k) => Number(k.frame) || 0));
+    outF = Math.max(...kfs.map((k) => Number(k.frame) || 0));
+  }
+  return { in: inF, out: outF };
+}
+
+function renderMfTimeline() {
+  const comp = getMfComp();
+  const listEl = document.getElementById('mf-timeline-list');
+  const metaEl = document.getElementById('mf-timeline-meta');
+  if (!listEl) return;
+  const clips = comp.layers.map((l) => ({ layer: l, ...mfLayerRange(l) }));
+  if (metaEl) metaEl.textContent = comp.name + ' | ' + comp.frameRate + ' fps | duration ' + comp.durationSeconds().toFixed(2) + 's';
+  if (clips.length === 0) {
+    listEl.innerHTML = '<div class="mf-layer-empty">No timeline clips. Add layers in Comps.</div>';
+    return;
+  }
+  listEl.innerHTML = clips.map((c) => {
+    const lid = c.layer.id.replace(/'/g, '');
+    return '<div class="mf-timeline-row">' +
+      '<span>' + c.layer.name + ' [' + (c.layer.source || '') + '] f' + c.in + '-' + c.out + '</span>' +
+      '<span class="mf-timeline-range">' +
+      'In <input type="number" class="mf-num" value="' + c.in + '" min="0" oninput="mfSetMfTimelineIn(\'' + lid + '\', this.value)">' +
+      'Out <input type="number" class="mf-num" value="' + c.out + '" min="0" oninput="mfSetMfTimelineOut(\'' + lid + '\', this.value)">' +
+      '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function mfSetMfTimelineIn(layerId, value) {
+  const comp = getMfComp();
+  const layer = comp.getLayer(layerId);
+  if (!layer) return;
+  const inF = Math.max(0, Math.min(mfLayerRange(layer).out, parseInt(value) || 0));
+  comp.addKeyframe(layerId, inF, comp.sampleLayer(layerId, inF), 'linear');
+  renderMfTimeline();
+}
+
+function mfSetMfTimelineOut(layerId, value) {
+  const comp = getMfComp();
+  const layer = comp.getLayer(layerId);
+  if (!layer) return;
+  const inF = mfLayerRange(layer).in;
+  const outF = Math.max(inF, parseInt(value) || inF);
+  comp.addKeyframe(layerId, outF, comp.sampleLayer(layerId, outF), 'linear');
+  renderMfTimeline();
 }
 
 // --- MelFilm layer tween panel ---
