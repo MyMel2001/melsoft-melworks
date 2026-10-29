@@ -3,7 +3,7 @@ const { MelLiteFilterEngine } = require('./filters');
 const { MelRawImportEngine } = require('./raw');
 
 let currentImage = null; // { width, height, data }
-let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0 };
+let adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, blur: 0, pixelate: 1, border: null, local: null };
 let brush = { x: 0, y: 0, size: 20 };
 
 const canvas = document.getElementById('ml-canvas');
@@ -70,7 +70,7 @@ function handleImageFile(event) {
       const offCtx = off.getContext('2d');
       offCtx.drawImage(img, 0, 0);
       currentImage = { width: w, height: h, data: offCtx.getImageData(0, 0, w, h).data };
-      adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
+      adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, blur: 0, pixelate: 1, border: null, local: null };
       updateSliders();
       renderImage();
       updateStatus();
@@ -81,7 +81,7 @@ function handleImageFile(event) {
 }
 
 function resetAdjustments() {
-  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, blur: 0, pixelate: 1, border: null, local: null };
   updateSliders();
   previewAdjustments();
 }
@@ -121,6 +121,19 @@ function applyCropNow() {
 
 function updateRotate(val) { adjustments.rotate = parseInt(val, 10) || 0; previewAdjustments(); }
 function updateSharpen(val) { adjustments.sharpen = parseFloat(val) || 0; document.getElementById('ml-sharpen-val').textContent = val; previewAdjustments(); }
+function updateBlur(val) { adjustments.blur = Math.max(0, parseInt(val, 10) || 0); document.getElementById('ml-blur-val').textContent = adjustments.blur; previewAdjustments(); }
+function updatePixelate(val) { adjustments.pixelate = Math.max(1, parseInt(val, 10) || 1); document.getElementById('ml-pixelate-val').textContent = adjustments.pixelate; previewAdjustments(); }
+function updateBorder() {
+  const width = parseInt(document.getElementById('ml-border-w').value, 10) || 0;
+  adjustments.border = { width: Math.max(0, width), color: adjustments.border && adjustments.border.color ? adjustments.border.color : { r: 0, g: 0, b: 0, a: 255 } };
+  previewAdjustments();
+}
+function updateBorderColor(key, val) {
+  const color = adjustments.border && adjustments.border.color ? adjustments.border.color : { r: 0, g: 0, b: 0, a: 255 };
+  color[key] = parseInt(val, 10) || 0;
+  adjustments.border = { width: (adjustments.border && adjustments.border.width) || 0, color };
+  previewAdjustments();
+}
 
 function updateSliders() {
   document.getElementById('ml-exp').value = adjustments.exposure;
@@ -141,6 +154,16 @@ function updateSliders() {
   document.getElementById('ml-crop-h').value = crop.height;
   document.getElementById('ml-rotate').value = adjustments.rotate;
   document.getElementById('ml-sharpen').value = adjustments.sharpen;
+  document.getElementById('ml-sharpen-val').textContent = adjustments.sharpen;
+  document.getElementById('ml-blur').value = adjustments.blur;
+  document.getElementById('ml-blur-val').textContent = adjustments.blur;
+  document.getElementById('ml-pixelate').value = adjustments.pixelate;
+  document.getElementById('ml-pixelate-val').textContent = adjustments.pixelate;
+  const border = adjustments.border || { width: 0, color: { r: 0, g: 0, b: 0, a: 255 } };
+  document.getElementById('ml-border-w').value = border.width;
+  document.getElementById('ml-border-r').value = border.color.r;
+  document.getElementById('ml-border-g').value = border.color.g;
+  document.getElementById('ml-border-b').value = border.color.b;
   document.getElementById('ml-brush-size').value = brush.size;
 }
 
@@ -173,7 +196,7 @@ async function importRawDng(event) {
   const raw = MelRawImportEngine.parseDng(buf);
   const rgba = MelRawImportEngine.toRGBA(raw);
   currentImage = { width: rgba.width, height: rgba.height, data: rgba.data };
-  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, blur: 0, pixelate: 1, border: null, local: null };
   updateSliders();
   renderImage();
   updateStatus();
@@ -217,7 +240,7 @@ async function loadProject(event) {
       const parts = String(img.data).split(',');
       for (let i = 0; i < Math.min(parts.length, data.length); i++) data[i] = parseInt(parts[i], 10) || 0;
       currentImage = { width, height, data };
-      adjustments = Object.assign({ exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null }, payload.adjustments || {});
+      adjustments = Object.assign({ exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, blur: 0, pixelate: 1, border: null, local: null }, payload.adjustments || {});
       brush = Object.assign({ x: 0, y: 0, size: 20 }, payload.brush || {});
       updateSliders();
       renderImage();

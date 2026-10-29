@@ -259,6 +259,44 @@ async function runTests() {
   assert.strictEqual(decImg.data[3], 255, 'MelLite FFMPEG decode sets alpha opaque');
   console.log('✓ MelLite FFMPEG decode bridge validated');
 
+  // 18. Test MelLite blur (box blur averages window)
+  const blurImg = { width: 3, height: 1, data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 255]) };
+  const blurOut = MelLiteFilterEngine.applyBlur(blurImg, 1);
+  assert.strictEqual(blurOut.width, 3, 'MelLite blur keeps width');
+  assert.strictEqual(blurOut.height, 1, 'MelLite blur keeps height');
+  assert.strictEqual(blurOut.data[4], 85, 'MelLite blur averages full window for interior pixel');
+  assert.strictEqual(blurOut.data[3], 255, 'MelLite blur keeps alpha opaque');
+  const blurId = MelLiteFilterEngine.applyBlur(blurImg, 0);
+  assert.strictEqual(blurId.data[0], 0, 'MelLite blur neutral at radius 0');
+
+  // 19. Test MelLite pixelate (block averaging)
+  const pixImg = { width: 4, height: 1, data: new Uint8ClampedArray([10, 10, 10, 255, 20, 20, 20, 255, 30, 30, 30, 255, 40, 40, 40, 255]) };
+  const pixOut = MelLiteFilterEngine.applyPixelate(pixImg, 2);
+  assert.strictEqual(pixOut.width, 4, 'MelLite pixelate keeps width');
+  assert.strictEqual(pixOut.height, 1, 'MelLite pixelate keeps height');
+  assert.strictEqual(pixOut.data[0], 15, 'MelLite pixelate averages block of 2 -> 15');
+  assert.strictEqual(pixOut.data[8], 35, 'MelLite pixelate averages second block -> 35');
+  const pixId = MelLiteFilterEngine.applyPixelate(pixImg, 1);
+  assert.strictEqual(pixId.data[0], 10, 'MelLite pixelate neutral at size 1');
+
+  // 20. Test MelLite border (adds colored frame)
+  const borderImg = { width: 1, height: 1, data: new Uint8ClampedArray([100, 100, 100, 255]) };
+  const borderOut = MelLiteFilterEngine.applyBorder(borderImg, { width: 1, color: { r: 0, g: 0, b: 0, a: 255 } });
+  assert.strictEqual(borderOut.width, 3, 'MelLite border grows width by 2x frame');
+  assert.strictEqual(borderOut.height, 3, 'MelLite border grows height by 2x frame');
+  assert.strictEqual(borderOut.data[0], 0, 'MelLite border paints frame color');
+  assert.strictEqual(borderOut.data[3], 255, 'MelLite border frame alpha opaque');
+  assert.strictEqual(borderOut.data[16], 100, 'MelLite border keeps interior pixel');
+
+  // 21. Test MelLite full pipeline integrates new filters
+  const filtPipe = MelLiteFilterEngine.apply(blurImg, { blur: 1 });
+  assert.strictEqual(filtPipe.data[4], 85, 'MelLite pipeline applies blur');
+  const filtPipePix = MelLiteFilterEngine.apply(pixImg, { pixelate: 2 });
+  assert.strictEqual(filtPipePix.data[0], 15, 'MelLite pipeline applies pixelate');
+  const filtPipeBorder = MelLiteFilterEngine.apply(borderImg, { border: { width: 2, color: { r: 255, g: 0, b: 0, a: 255 } } });
+  assert.strictEqual(filtPipeBorder.width, 5, 'MelLite pipeline applies border');
+  assert.strictEqual(filtPipeBorder.data[0], 255, 'MelLite pipeline border frame color red');
+
   console.log('\nALL MELITE TESTS PASSED SUCCESSFULLY!\n');
 }
 

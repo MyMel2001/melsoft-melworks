@@ -142,3 +142,16 @@ body {
   width: 44px;
   text-align: right;
 }
+
+.ml-border-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.ml-border-row input {
+  width: 56px;
+}

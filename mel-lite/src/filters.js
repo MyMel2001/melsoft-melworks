@@ -106,6 +106,15 @@ class MelLiteFilterEngine {
     if (adjustments.sharpen !== undefined) {
       out = MelLiteFilterEngine.applySharpen(out, adjustments.sharpen);
     }
+    if (adjustments.blur) {
+      out = MelLiteFilterEngine.applyBlur(out, adjustments.blur);
+    }
+    if (adjustments.pixelate) {
+      out = MelLiteFilterEngine.applyPixelate(out, adjustments.pixelate);
+    }
+    if (adjustments.border) {
+      out = MelLiteFilterEngine.applyBorder(out, adjustments.border);
+    }
     return out;
   }
 
@@ -292,6 +301,126 @@ class MelLiteFilterEngine {
       }
     }
     return imageData;
+  }
+
+  // Box blur via separable two-pass average (radius px; window = 2*radius+1).
+  static applyBlur(imageData, radius = 2) {
+    const w = imageData.width;
+    const h = imageData.height;
+    const src = imageData.data;
+    const r = Math.max(0, Math.round(radius) || 0);
+    const box = Math.max(1, Math.min(w, r * 2 + 1));
+    const half = Math.floor(box / 2);
+    const temp = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - half);
+        const x1 = Math.min(w - 1, x + half);
+        let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+        for (let px = x0; px <= x1; px++) {
+          const si = (y * w + px) * 4;
+          sr += src[si]; sg += src[si + 1]; sb += src[si + 2]; sa += src[si + 3];
+          n++;
+        }
+        const di = (y * w + x) * 4;
+        temp[di] = Math.round(sr / n);
+        temp[di + 1] = Math.round(sg / n);
+        temp[di + 2] = Math.round(sb / n);
+        temp[di + 3] = Math.round(sa / n);
+      }
+    }
+    const out = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const y0 = Math.max(0, y - half);
+        const y1 = Math.min(h - 1, y + half);
+        let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+        for (let py = y0; py <= y1; py++) {
+          const di = (py * w + x) * 4;
+          sr += temp[di]; sg += temp[di + 1]; sb += temp[di + 2]; sa += temp[di + 3];
+          n++;
+        }
+        const di = (y * w + x) * 4;
+        out[di] = Math.round(sr / n);
+        out[di + 1] = Math.round(sg / n);
+        out[di + 2] = Math.round(sb / n);
+        out[di + 3] = Math.round(sa / n);
+      }
+    }
+    return { width: w, height: h, data: out };
+  }
+
+  // Pixelate: average each pixelSize x pixelSize block into one flat color.
+  static applyPixelate(imageData, pixelSize = 8) {
+    const w = imageData.width;
+    const h = imageData.height;
+    const src = imageData.data;
+    const size = Math.max(1, Math.round(pixelSize) || 1);
+    const out = new Uint8ClampedArray(w * h * 4);
+    for (let by = 0; by < h; by += size) {
+      const bh = Math.min(size, h - by);
+      for (let bx = 0; bx < w; bx += size) {
+        const bw = Math.min(size, w - bx);
+        let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+        for (let y = by; y < by + bh; y++) {
+          for (let x = bx; x < bx + bw; x++) {
+            const si = (y * w + x) * 4;
+            sr += src[si]; sg += src[si + 1]; sb += src[si + 2]; sa += src[si + 3];
+            n++;
+          }
+        }
+        const r = Math.round(sr / n);
+        const g = Math.round(sg / n);
+        const b = Math.round(sb / n);
+        const a = Math.round(sa / n);
+        for (let y = by; y < by + bh; y++) {
+          for (let x = bx; x < bx + bw; x++) {
+            const di = (y * w + x) * 4;
+            out[di] = r;
+            out[di + 1] = g;
+            out[di + 2] = b;
+            out[di + 3] = a;
+          }
+        }
+      }
+    }
+    return { width: w, height: h, data: out };
+  }
+
+  // Border: add colored frame of `width` px around image; output dims grow by 2*width.
+  static applyBorder(imageData, border = { width: 0, color: { r: 0, g: 0, b: 0, a: 255 } }) {
+    const bw = Math.max(0, Math.round(border.width) || 0);
+    const color = border.color || { r: 0, g: 0, b: 0, a: 255 };
+    const cr = Math.max(0, Math.min(255, Math.round(color.r) || 0));
+    const cg = Math.max(0, Math.min(255, Math.round(color.g) || 0));
+    const cb = Math.max(0, Math.min(255, Math.round(color.b) || 0));
+    const ca = Math.max(0, Math.min(255, Math.round(color.a === undefined ? 255 : color.a) || 255));
+    const w = imageData.width;
+    const h = imageData.height;
+    const src = imageData.data;
+    const outW = w + bw * 2;
+    const outH = h + bw * 2;
+    const out = new Uint8ClampedArray(outW * outH * 4);
+    for (let y = 0; y < outH; y++) {
+      for (let x = 0; x < outW; x++) {
+        const di = (y * outW + x) * 4;
+        const inX = x - bw;
+        const inY = y - bw;
+        if (inX >= 0 && inX < w && inY >= 0 && inY < h) {
+          const si = (inY * w + inX) * 4;
+          out[di] = src[si];
+          out[di + 1] = src[si + 1];
+          out[di + 2] = src[si + 2];
+          out[di + 3] = src[si + 3];
+        } else {
+          out[di] = cr;
+          out[di + 1] = cg;
+          out[di + 2] = cb;
+          out[di + 3] = ca;
+        }
+      }
+    }
+    return { width: outW, height: outH, data: out };
   }
 }
 
