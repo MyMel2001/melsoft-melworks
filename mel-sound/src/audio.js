@@ -72,7 +72,6 @@ class MelSoundPlayer {
       osc.frequency.value = noteToFrequency(e.midi);
       gain.gain.setValueAtTime(0, now + e.time);
       gain.gain.linearRampToValueAtTime(0.8 * (e.volume || 1), now + e.time + 0.01);
-      gain.gain.setValueAtTime(0.8 * (e.volume || 1), now + e.time + e.duration);
       gain.gain.linearRampToValueAtTime(0, now + e.time + e.duration);
       osc.connect(gain);
       gain.connect(this.masterGain);

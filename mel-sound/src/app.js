@@ -101,6 +101,7 @@ function saveFls() {
   writer.addTempo(currentProject.bpm);
   writer.addKind(currentProject.kind);
   writer.addName('MelSound Project');
+  currentProject.patterns.forEach((p) => writer.addPattern(p));
   const buf = writer.build();
   const bin = Array.from(buf, (b) => String.fromCharCode(b)).join('');
   const blob = new Blob([bin], { type: 'application/octet-stream' });
@@ -119,11 +120,18 @@ function openFls(event) {
   reader.onload = async (e) => {
     const buf = new Uint8Array(await file.arrayBuffer());
     const parsed = MelFlsReader.parse(buf);
+    const restoredPatterns = (parsed.patterns || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      steps: p.steps || {}
+    }));
     currentProject = new MelSoundProject({
       bpm: parsed.bpm,
-      kind: parsed.kind
+      kind: parsed.kind,
+      patterns: restoredPatterns,
+      patternChain: []
     });
-    alert('FLP loaded: bpm=' + parsed.bpm + ' kind=' + parsed.kind + ' name=' + parsed.name);
+    alert('FLP loaded: bpm=' + parsed.bpm + ' kind=' + parsed.kind + ' name=' + parsed.name + ' patterns=' + restoredPatterns.length);
     updateStatus();
   };
   reader.readAsArrayBuffer(file);

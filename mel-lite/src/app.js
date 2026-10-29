@@ -27,11 +27,30 @@ function resizeCanvas() {
 function renderImage() {
   if (!currentImage) return;
   resizeCanvas();
-  ctx.putImageData(new ImageData(currentImage.data, currentImage.width, currentImage.height), 0, 0);
-  // Draw scaled to canvas backing store
-  ctx.save();
-  ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-  ctx.restore();
+  const off = document.createElement('canvas');
+  off.width = currentImage.width;
+  off.height = currentImage.height;
+  const offCtx = off.getContext('2d');
+  offCtx.putImageData(new ImageData(currentImage.data, currentImage.width, currentImage.height), 0, 0);
+  ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+}
+
+function previewAdjustments() {
+  if (!currentImage) return;
+  const outImg = MelLiteFilterEngine.apply(currentImage, adjustments);
+  renderImage();
+  updateStatus();
+}
+
+function applyAdjustments() {
+  if (!currentImage) {
+    alert('Open an image first.');
+    return;
+  }
+  const outImg = MelLiteFilterEngine.apply(currentImage, adjustments);
+  currentImage = { width: outImg.width, height: outImg.height, data: outImg.data };
+  renderImage();
+  updateStatus();
 }
 
 function handleImageFile(event) {
@@ -75,6 +94,7 @@ function applyAdjustments() {
 function resetAdjustments() {
   adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
   updateSliders();
+  previewAdjustments();
 }
 
 function canvasClick(e) {
@@ -110,8 +130,8 @@ function applyCropNow() {
   applyAdjustments();
 }
 
-function updateRotate(val) { adjustments.rotate = parseInt(val, 10) || 0; }
-function updateSharpen(val) { adjustments.sharpen = parseFloat(val) || 0; }
+function updateRotate(val) { adjustments.rotate = parseInt(val, 10) || 0; previewAdjustments(); }
+function updateSharpen(val) { adjustments.sharpen = parseFloat(val) || 0; document.getElementById('ml-sharpen-val').textContent = val; previewAdjustments(); }
 
 function updateSliders() {
   document.getElementById('ml-exp').value = adjustments.exposure;
@@ -140,16 +160,17 @@ function updateCropY(val) { if (adjustments.crop) adjustments.crop.y = parseInt(
 function updateCropW(val) { if (adjustments.crop) adjustments.crop.width = parseInt(val, 10) || 0; }
 function updateCropH(val) { if (adjustments.crop) adjustments.crop.height = parseInt(val, 10) || 0; }
 
-function updateExposure(val) { adjustments.exposure = parseFloat(val) || 0; document.getElementById('ml-exp-val').textContent = val; }
-function updateContrast(val) { adjustments.contrast = parseInt(val, 10) || 0; document.getElementById('ml-contrast-val').textContent = val; }
-function updateBrightness(val) { adjustments.brightness = parseInt(val, 10) || 0; document.getElementById('ml-brightness-val').textContent = val; }
-function updateSaturation(val) { adjustments.saturation = parseInt(val, 10) / 100; document.getElementById('ml-saturation-val').textContent = val + '%'; }
+function updateExposure(val) { adjustments.exposure = parseFloat(val) || 0; document.getElementById('ml-exp-val').textContent = val; previewAdjustments(); }
+function updateContrast(val) { adjustments.contrast = parseInt(val, 10) || 0; document.getElementById('ml-contrast-val').textContent = val; previewAdjustments(); }
+function updateBrightness(val) { adjustments.brightness = parseInt(val, 10) || 0; document.getElementById('ml-brightness-val').textContent = val; previewAdjustments(); }
+function updateSaturation(val) { adjustments.saturation = parseInt(val, 10) / 100; document.getElementById('ml-saturation-val').textContent = val + '%'; previewAdjustments(); }
 function updateWhiteBalance() {
   adjustments.whiteBalance = {
     r: parseFloat(document.getElementById('ml-wb-r').value) || 1,
     g: parseFloat(document.getElementById('ml-wb-g').value) || 1,
     b: parseFloat(document.getElementById('ml-wb-b').value) || 1
   };
+  previewAdjustments();
 }
 
 function updateStatus() {
@@ -163,7 +184,7 @@ async function importRawDng(event) {
   const raw = MelRawImportEngine.parseDng(buf);
   const rgba = MelRawImportEngine.toRGBA(raw);
   currentImage = { width: rgba.width, height: rgba.height, data: rgba.data };
-  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 } };
+  adjustments = { exposure: 0, contrast: 0, brightness: 0, saturation: 1, whiteBalance: { r: 1, g: 1, b: 1 }, crop: null, rotate: 0, sharpen: 0, local: null };
   updateSliders();
   renderImage();
   updateStatus();

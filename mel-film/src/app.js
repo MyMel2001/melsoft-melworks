@@ -273,7 +273,7 @@ function renderMfCompPreview() {
   comp.layers.forEach((l, i) => {
     const props = comp.sampleLayer(l.id, mfTweenFrame) || {};
     ctx.save();
-    ctx.translate(comp.width / 2 + (props.x || 0), comp.height / 2 + (props.y || 0));
+    ctx.translate(comp.width / 2 + (props.x || 0) * comp.width, comp.height / 2 + (props.y || 0) * comp.height);
     ctx.rotate((props.rotation || 0) * Math.PI / 180);
     ctx.scale(props.scale === undefined ? 1 : props.scale, props.scale === undefined ? 1 : props.scale);
     ctx.globalAlpha = props.opacity === undefined ? 1 : props.opacity;

@@ -19,18 +19,34 @@ function updateLang() {
   if (langEl) langEl.textContent = String(mvLanguage || 'html').toUpperCase();
 }
 
+function melvuPreviewBaseStyle() {
+  return 'body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;margin:0;}h1,h2,h3{color:#38bdf8;}code{background:#0f172a;padding:2px 6px;border-radius:4px;}';
+}
+
+function buildPreviewDoc() {
+  const html = mvDocText();
+  const baseStyle = melvuPreviewBaseStyle();
+  if (mvLanguage === 'markdown') {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + baseStyle + '</style></head><body>' + window.MelMarkdown.markdownToHtml(html) + '</body></html>';
+  }
+  if (mvLanguage === 'css') {
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + baseStyle + '</style><style>' + html + '</style></head><body><div class="melvu-preview-root"></div></body></html>';
+  }
+  if (/^\s*</.test(html) && /<\s*html[\s>]/i.test(html)) {
+    const content = html
+      .replace(/<\s*!doctype[^>]*>/gi, '')
+      .replace(/<\s*html[^>]*>/gi, '')
+      .replace(/<\s*head[^>]*>[\s\S]*?<\s*\/\s*head\s*>/gi, '')
+      .replace(/<\s*\/\s*html\s*>/gi, '');
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + baseStyle + '</style></head><body>' + content + '</body></html>';
+  }
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + baseStyle + '</style></head><body>' + html + '</body></html>';
+}
+
 function updatePreview() {
   const frame = document.getElementById('melvu-preview');
-  const html = mvDocText();
-  let docHtml = '';
-  if (mvLanguage === 'markdown') {
-    docHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;}h1,h2,h3{color:#38bdf8;}code{background:#0f172a;padding:2px 6px;border-radius:4px;}</style></head><body>' + window.MelMarkdown.markdownToHtml(html) + '</body></html>';
-  } else if (mvLanguage === 'css') {
-    docHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;}code{background:#0f172a;padding:2px 6px;border-radius:4px;}</style><style>' + html + '</style></head><body><div class="melvu-preview-root">' + html + '</div></body></html>';
-  } else {
-    docHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;}</style></head><body>' + html + '</body></html>';
-  }
-  if (frame) frame.srcdoc = docHtml;
+  if (!frame) return;
+  frame.srcdoc = buildPreviewDoc();
 }
 
 function setDoc(text, language, fileName) {
@@ -43,6 +59,7 @@ function setDoc(text, language, fileName) {
     editorEl.dataset.language = mvLanguage;
   }
   updatePreview();
+  updateLang();
   updateStatus('MelVU | ' + mvFileName);
 }
 
@@ -86,6 +103,7 @@ function handleMelvuSaveAs(event) {
   }
   fs.writeFileSync(file.path || file.name, mvDocText());
   mvFileName = file.name;
+  mvDirty = false;
   updateStatus('MelVU | Saved ' + mvFileName);
 }
 
@@ -101,6 +119,7 @@ function melvuSaveFile() {
     return;
   }
   fs.writeFileSync(mvFileName, mvDocText());
+  mvDirty = false;
   updateStatus('MelVU | Saved ' + mvFileName);
 }
 
@@ -111,6 +130,13 @@ function mvCursorLine() {
   return pos.line;
 }
 
+function syncEditorFromDoc() {
+  const editorEl = document.getElementById('melvu-editor');
+  const text = mvDoc ? mvDoc.getText() : '';
+  if (editorEl) editorEl.value = text;
+  return editorEl;
+}
+
 function melvuEditorAction(action) {
   if (!mvDoc) {
     updateStatus('MelVU | No document open');
@@ -119,17 +145,22 @@ function melvuEditorAction(action) {
   const text = mvDoc.getText();
   if (action === 'undo') {
     const ok = mvDoc.undo();
+    syncEditorFromDoc();
+    updatePreview();
     updateStatus('MelVU | Undo ' + (ok ? 'ok' : 'nothing to undo'));
     return;
   }
   if (action === 'redo') {
     const ok = mvDoc.redo();
+    syncEditorFromDoc();
+    updatePreview();
     updateStatus('MelVU | Redo ' + (ok ? 'ok' : 'nothing to redo'));
     return;
   }
   if (action === 'format') {
     const formatted = window.MelEditor.formatDocument(text, mvLanguage);
     mvDoc.setText(formatted);
+    syncEditorFromDoc();
     updatePreview();
     updateStatus('MelVU | Formatted ' + String(mvLanguage).toUpperCase());
     return;
@@ -138,6 +169,7 @@ function melvuEditorAction(action) {
     const pos = mvDoc.positionToOffset({ line: mvCursorLine(), column: 1 });
     const out = window.MelEditor.toggleComment(mvDoc.getText(), pos, mvLanguage);
     mvDoc.setText(out);
+    syncEditorFromDoc();
     updatePreview();
     updateStatus('MelVU | Toggled comment');
     return;
@@ -150,12 +182,13 @@ function melvuEditorAction(action) {
     return;
   }
   if (action === 'replace') {
-    const query = window.prompt('Replace');
+    const query = window.prompt('Find');
     if (query === null) return;
     const replacement = window.prompt('Replace with');
     if (replacement === null) return;
     const next = window.MelEditor.replaceAll(text, query, replacement, { regex: false });
     mvDoc.setText(next);
+    syncEditorFromDoc();
     updatePreview();
     updateStatus('MelVU | Replaced occurrences of "' + query + '"');
     return;

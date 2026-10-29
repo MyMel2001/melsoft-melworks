@@ -1,10 +1,17 @@
 /* MelLite Studio styles */
+html, body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .ml-header {
@@ -43,8 +50,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 0;
   background: #020617;
-  overflow: hidden;
 }
 
 .ml-canvas {

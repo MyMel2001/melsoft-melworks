@@ -70,8 +70,14 @@ class MelLiteFilterEngine {
   }
 
   // Full development pipeline: exposure -> contrast -> brightness -> saturation -> white balance -> curves.
+  // Works on a copy so callers can preview without mutating the committed source image.
   static apply(imageData, adjustments = {}) {
-    let out = imageData;
+    const src = imageData && imageData.data ? imageData.data : imageData;
+    const width = imageData ? imageData.width : 0;
+    const height = imageData ? imageData.height : 0;
+    const data = new Uint8ClampedArray(src.length);
+    data.set(src);
+    let out = { width, height, data };
     out = MelLiteFilterEngine.applyExposure(out, adjustments.exposure || 0);
     out = MelLiteFilterEngine.applyContrast(out, adjustments.contrast || 0);
     out = MelLiteFilterEngine.applyBrightness(out, adjustments.brightness || 0);

@@ -38,7 +38,11 @@ class MelRawImportEngine {
     if (!widthEntry || !heightEntry) throw new Error('RAW file missing dimensions');
     const width = widthEntry.value;
     const height = heightEntry.value;
-    const bitsPerSample = bitsEntry ? bitsEntry.value : 16;
+    let bitsPerSample = bitsEntry ? bitsEntry.value : 16;
+    if (bitsEntry && bitsEntry.count > 1) {
+      const arrOff = bitsEntry.value;
+      bitsPerSample = little ? (buf[arrOff] | (buf[arrOff + 1] << 8)) : ((buf[arrOff] << 8) | buf[arrOff + 1]);
+    }
     const compression = compressionEntry ? compressionEntry.value : 1;
     const samplesPerPixel = samplesEntry ? samplesEntry.value : 3;
     const rowsPerStrip = rowsEntry ? rowsEntry.value : height;
@@ -60,7 +64,7 @@ class MelRawImportEngine {
       acc += counts[s];
     }
 
-    return { width, height, bitsPerSample, compression, samplesPerPixel, rowsPerStrip, data };
+    return { width, height, bitsPerSample, compression, samplesPerPixel, rowsPerStrip, data, endian: little ? 'little' : 'big' };
   }
 
   static readI32Array(buf, offset, count, little) {
@@ -80,18 +84,26 @@ class MelRawImportEngine {
 
   // Convert raw strip data (8 or 16 bit) to 8-bit RGBA pixel array.
   static toRGBA(raw) {
-    const { width, height, data, samplesPerPixel, bitsPerSample } = raw;
+    const { width, height, data, samplesPerPixel, bitsPerSample, endian } = raw;
     const spp = samplesPerPixel || 3;
     const pixels = width * height;
     const out = new Uint8ClampedArray(pixels * 4);
     const is16 = (bitsPerSample || 16) === 16;
+    const isLE = (endian || 'little') !== 'big';
     const bytesPerSample = is16 ? 2 : 1;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const si = ((y * width + x) * spp) * bytesPerSample;
-        const r = is16 ? (data[si] | (data[si + 1] << 8)) : data[si];
-        const g = is16 ? (data[si + 2] | (data[si + 3] << 8)) : data[si + 1];
-        const b = is16 ? (data[si + 4] | (data[si + 5] << 8)) : data[si + 2];
+        let r, g, b;
+        if (is16) {
+          r = MelRawImportEngine.readSample(data, si, isLE);
+          g = MelRawImportEngine.readSample(data, si + bytesPerSample, isLE);
+          b = MelRawImportEngine.readSample(data, si + bytesPerSample * 2, isLE);
+        } else {
+          r = data[si];
+          g = data[si + 1];
+          b = data[si + 2];
+        }
         const o = (y * width + x) * 4;
         out[o] = is16 ? Math.round((r * 255) / 65535) : Math.min(255, r);
         out[o + 1] = is16 ? Math.round((g * 255) / 65535) : Math.min(255, g);
@@ -100,6 +112,12 @@ class MelRawImportEngine {
       }
     }
     return { width, height, data: out };
+  }
+
+  static readSample(data, offset, isLE) {
+    const v0 = data[offset];
+    const v1 = data[offset + 1];
+    return isLE ? (v0 | (v1 << 8)) : ((v0 << 8) | v1);
   }
 }
 

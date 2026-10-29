@@ -9,6 +9,7 @@ const FL_DATA_MAGIC = [0x46, 0x4c, 0x64, 0x74]; // "FLdt"
 const EVENT_TEMPO = 0x01;
 const EVENT_KIND = 0x02;
 const EVENT_PLUGIN = 0xc0; // varint + opaque blob
+const EVENT_PATTERN = 0xe1; // varint + pattern record payload
 
 const KIND_CODES = { instrumental: 0, vocal: 1, other: 2 };
 const KIND_NAMES = ['instrumental', 'vocal', 'other'];
@@ -64,6 +65,21 @@ function concatBytes(arrays) {
   return out;
 }
 
+function encodeTextBytes(s) {
+  const bytes = new TextEncoder ? new TextEncoder().encode(s || '') : Buffer.from(s || '', 'utf8');
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) out[i] = bytes[i];
+  return out;
+}
+
+function textWithLen(s) {
+  const bytes = encodeTextBytes(s);
+  const out = new Uint8Array(1 + bytes.length);
+  out[0] = bytes.length;
+  out.set(bytes, 1);
+  return out;
+}
+
 class MelFlsWriter {
   constructor() {
     this.events = [];
@@ -108,6 +124,32 @@ class MelFlsWriter {
     return this;
   }
 
+  addPattern(pattern) {
+    const p = pattern || {};
+    const steps = p.steps || {};
+    const keys = Object.keys(steps);
+    const stepArrs = keys.map((k) => (Array.isArray(steps[k]) ? steps[k] : new Array(16).fill(0)));
+    const stepBufSize = keys.reduce((n, k) => n + 1 + encodeTextBytes(k).length + 16, 0);
+    const stepBuf = new Uint8Array(Math.max(stepBufSize, keys.length > 0 ? 1 : 0));
+    let offset = 0;
+    keys.forEach((k, idx) => {
+      const tb = encodeTextBytes(k);
+      stepBuf[offset] = tb.length;
+      for (let i = 0; i < tb.length; i++) stepBuf[offset + 1 + i] = tb[i];
+      const arr = stepArrs[idx];
+      for (let s = 0; s < 16; s++) stepBuf[offset + 1 + tb.length + s] = Math.max(0, Math.min(127, Math.round(arr[s] || 0)));
+      offset += 1 + tb.length + 16;
+    });
+    const payload = concatBytes([textWithLen(p.id || ''), textWithLen(p.name || ''), new Uint8Array([keys.length]), stepBuf]);
+    const varint = encodeVarint(payload.length);
+    const ev = new Uint8Array(1 + varint.length + payload.length);
+    ev[0] = EVENT_PATTERN;
+    ev.set(varint, 1);
+    ev.set(payload, 1 + varint.length);
+    this.events.push(ev);
+    return this;
+  }
+
   build() {
     const streamBuf = concatBytes(this.events);
     const headerPayload = new Uint8Array([1, 0, 1, 0, 4, 0]); // format=1, channels=1, ppq=4
@@ -125,6 +167,28 @@ class MelFlsWriter {
 }
 
 class MelFlsReader {
+  static parsePatternPayload(payload) {
+    let pos = 0;
+    const readText = () => {
+      const len = payload[pos++] || 0;
+      let s = '';
+      for (let i = 0; i < len; i++) s += String.fromCharCode(payload[pos + i]);
+      pos += len;
+      return s;
+    };
+    const patternId = readText();
+    const patternName = readText();
+    const stepCount = payload[pos++] || 0;
+    const steps = {};
+    for (let t = 0; t < stepCount; t++) {
+      const trackId = readText();
+      const arr = [];
+      for (let s = 0; s < 16; s++) arr.push(payload[pos++] || 0);
+      steps[trackId] = arr;
+    }
+    return { id: patternId, name: patternName, steps };
+  }
+
   static parse(buffer) {
     const buf = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
     if (buf.length < 22) throw new Error('FLP file too short');
@@ -140,7 +204,7 @@ class MelFlsReader {
     const stream = buf.subarray(22, 22 + dataBytes);
     if (stream.length < 1) throw new Error('Empty FLP event stream');
 
-    const result = { bpm: 120, kindCode: 0, name: '', pluginStates: [] };
+    const result = { bpm: 120, kindCode: 0, name: '', pluginStates: [], patterns: [] };
     let pos = 0;
     while (pos < stream.length) {
       const id = stream[pos++];
@@ -151,6 +215,8 @@ class MelFlsReader {
         pos += v.value;
         if (id === EVENT_PLUGIN) {
           result.pluginStates.push({ blobId: result.pluginStates.length, bytes: Array.from(payload) });
+        } else if (id === EVENT_PATTERN) {
+          result.patterns.push(MelFlsReader.parsePatternPayload(payload));
         } else {
           result.name = new TextDecoder ? new TextDecoder().decode(payload) : '';
         }
@@ -170,4 +236,4 @@ class MelFlsReader {
   }
 }
 
-module.exports = { MelFlsWriter, MelFlsReader, KIND_CODES, KIND_NAMES, EVENT_TEMPO, EVENT_KIND, EVENT_PLUGIN };
+module.exports = { MelFlsWriter, MelFlsReader, KIND_CODES, KIND_NAMES, EVENT_TEMPO, EVENT_KIND, EVENT_PLUGIN, EVENT_PATTERN };

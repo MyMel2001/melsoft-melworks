@@ -2,16 +2,18 @@
 
 ## MelCromedia
 
-* [] Add tweening+full object support
+* [x] Add tweening+full object support
 
 ## MelFilm
 
-* [] Add tweening.
+* [x] Add tweening.
+* [ ] Add image/sound importing support.
+* [ ] Add transitions.
 
 ## MelVU
 
-* [] Create the app
-* [] Should work near-idenetically to NVU/Komposer for HTML visual editing (as well as markdown editing)
+* [x] Create the app
+* [x] Should work near-idenetically to NVU/Komposer for HTML visual editing (as well as markdown editing)
 * [] Should be as powerful as Adobe DreamWeaver for CSS
 * [] Should be as great as VSCode for other langs (example: JS, Python3, Golang)
 

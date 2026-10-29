@@ -32,8 +32,8 @@
     let out = '';
     let i = 0;
     const reCode = /`([^`]+)`/y;
-    const reImg = /!\[([^\]]*)\]\(\s*([^)\s]*)(?:\s+&quot;[^&]*&quot;)?\s*\)/y;
-    const reLink = /\[([^\]]*)\]\(\s*([^)\s]*)(?:\s+&quot;[^&]*&quot;)?\s*\)/y;
+    const reImg = /!\[([^\]]*)\]\(\s*([^)\s]*)(?:\s+"[^"]*")?\s*\)/y;
+    const reLink = /\[([^\]]*)\]\(\s*([^)\s]*)(?:\s+"[^"]*")?\s*\)/y;
     const reAuto = /<(https?:\/\/[^\s<>]+)>/y;
     const reStrong = /(\*\*|__)([\s\S]*?)\1/y;
     const reStrike = /~~([\s\S]*?)~~/y;
@@ -70,7 +70,14 @@
       if ((m = reEm.exec(s)) && m.index === i) { out += '<em>' + renderInline(m[1]) + '</em>'; i += m[0].length; continue; }
       reUnderscoreEm.lastIndex = i;
       if ((m = reUnderscoreEm.exec(s)) && m.index === i) { out += '<em>' + renderInline(m[1]) + '</em>'; i += m[0].length; continue; }
-      if (s[i] === '<') { out += escapeHtml(s[i]); i++; continue; }
+      if (s[i] === '<') {
+        // Raw inline HTML passes through unescaped so previews render like NVU.
+        const closeIdx = s.indexOf('>', i);
+        const end = closeIdx === -1 ? s.length : closeIdx + 1;
+        out += s.slice(i, end);
+        i = end;
+        continue;
+      }
       out += s[i];
       i++;
     }

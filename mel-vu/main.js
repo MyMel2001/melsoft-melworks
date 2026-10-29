@@ -23,9 +23,9 @@ function createWindow() {
       label: 'File',
       submenu: [
         { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => mainWindow.webContents.executeJavaScript('melvuNewFile()') },
-        { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => mainWindow.webContents.executeJavaScript('melvuOpenFile()') },
+        { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => mainWindow.webContents.executeJavaScript('triggerMelvuOpen()') },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.executeJavaScript('melvuSaveFile()') },
-        { label: 'Save As...', click: () => mainWindow.webContents.executeJavaScript('melvuSaveFileAs()') },
+        { label: 'Save As...', click: () => mainWindow.webContents.executeJavaScript('triggerMelvuSaveAs()') },
         { type: 'separator' },
         { label: 'Exit', role: 'quit' }
       ]

@@ -26,7 +26,7 @@
       <span id="ml-exp-val">0.0</span>
     </label>
     <label class="ml-slider-row">Contrast
-      <input type="range" id="ml-contrast" min="0" max="100" value="0" oninput="updateContrast(this.value)">
+      <input type="range" id="ml-contrast" min="0" max="255" value="0" oninput="updateContrast(this.value)">
       <span id="ml-contrast-val">0</span>
     </label>
     <label class="ml-slider-row">Brightness
@@ -69,6 +69,8 @@
       <button class="ml-btn" id="ml-btn-local" onclick="applyLocalNow()">Apply Local</button>
     </div>
     <button class="ml-btn" id="ml-btn-reset" onclick="resetAdjustments()">Reset Adjustments</button>
+    <button class="ml-btn" id="ml-btn-preview" onclick="previewAdjustments()">Preview Adjustments</button>
+    <button class="ml-btn" id="ml-btn-apply" onclick="applyAdjustments()">Apply Adjustments</button>
     <div class="ml-status" id="ml-status">MelLite | No image open</div>
   </aside>
 

@@ -6,6 +6,8 @@ body {
   color: #e2e8f0;
   overflow: hidden;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .melvu-header {
