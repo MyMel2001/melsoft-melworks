@@ -50,7 +50,7 @@ function updatePreview() {
 }
 
 function setDoc(text, language, fileName) {
-  mvLanguage = language || 'html';
+  mvLanguage = language || window.MelEditor.detectLanguageFromContent(text) || 'html';
   mvFileName = fileName || 'untitled.html';
   mvDoc = new window.MelEditor.EditorDoc(text, mvLanguage);
   const editorEl = document.getElementById('melvu-editor');
@@ -89,22 +89,15 @@ function handleMelvuFile(event) {
 }
 
 function triggerMelvuSaveAs() {
-  const input = document.getElementById('melvu-save-input');
-  if (input) input.click();
-}
-
-function handleMelvuSaveAs(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const fs = (typeof require === 'function') ? require('fs') : null;
-  if (!fs) {
-    window.alert('MelVU Save As requires a file system.');
-    return;
-  }
-  fs.writeFileSync(file.path || file.name, mvDocText());
-  mvFileName = file.name;
-  mvDirty = false;
-  updateStatus('MelVU | Saved ' + mvFileName);
+  const { ipcRenderer } = require('electron');
+  ipcRenderer.invoke('melvu:saveAs', mvFileName).then((filePath) => {
+    if (!filePath) return;
+    const fs = require('fs');
+    fs.writeFileSync(filePath, mvDocText());
+    mvFileName = String(filePath).split(/[\\/]/).pop();
+    mvDirty = false;
+    updateStatus('MelVU | Saved ' + mvFileName);
+  });
 }
 
 function melvuSaveFile() {
@@ -114,8 +107,7 @@ function melvuSaveFile() {
     return;
   }
   if (!mvFileName || mvFileName === 'untitled.html') {
-    const input = document.getElementById('melvu-save-input');
-    if (input) input.click();
+    triggerMelvuSaveAs();
     return;
   }
   fs.writeFileSync(mvFileName, mvDocText());

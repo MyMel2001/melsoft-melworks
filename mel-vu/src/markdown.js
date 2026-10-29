@@ -1,10 +1,9 @@
 // MelMarkdown - UMD markdown <-> HTML engine (Node module.exports + window.MelMarkdown)
 (function (root, factory) {
   const api = factory();
+  root.MelMarkdown = api;
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
-  } else {
-    root.MelMarkdown = api;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   function escapeHtml(s) {

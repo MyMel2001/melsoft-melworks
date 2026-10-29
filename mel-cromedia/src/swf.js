@@ -1,6 +1,6 @@
 // MelCromedia SWF Binary Encoder & Decoder (Adobe SWF Specification v19 Compliant with AS3 / AVM2)
 
-const As3Engine = (typeof require !== 'undefined') ? require('./as3') : (typeof window !== 'undefined' ? window.As3Engine : null);
+const SwfAs3Engine = (typeof require !== 'undefined') ? require('./as3') : (typeof window !== 'undefined' ? window.As3Engine : null);
 
 class BitWriter {
   constructor() {
@@ -332,7 +332,7 @@ class SwfMovie {
     ));
 
     // Compile ActionScript 3 (AVM2 ABC Bytecode) if AS3 enabled
-    if (this.as3 && As3Engine) {
+    if (this.as3 && SwfAs3Engine) {
       let combinedScript = '';
       this.frames.forEach((f, idx) => {
         if (f.actions) {
@@ -343,7 +343,7 @@ class SwfMovie {
       if (!combinedScript.trim()) {
         combinedScript = '// MelCromedia Main Timeline Script\nstop();\ntrace("MelCromedia AS3 Initialized");';
       }
-      const abcBuf = As3Engine.As3Compiler.compile(combinedScript, { className: this.documentClass });
+      const abcBuf = SwfAs3Engine.As3Compiler.compile(combinedScript, { className: this.documentClass });
       tagChunks.push(SwfMovie.encodeDoABC(0, 'frame_1', abcBuf));
       tagChunks.push(SwfMovie.encodeSymbolClass([{ tagId: 0, className: this.documentClass }]));
     }
@@ -480,9 +480,9 @@ class SwfMovie {
         p = end + 1;
         const abcBytes = tagData.slice(p);
         let disassembly = null;
-        if (As3Engine) {
+        if (SwfAs3Engine) {
           try {
-            disassembly = As3Engine.As3Disassembler.disassemble(abcBytes);
+            disassembly = SwfAs3Engine.As3Disassembler.disassemble(abcBytes);
           } catch (e) {
             disassembly = { error: e.message };
           }

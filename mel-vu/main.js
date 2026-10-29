@@ -1,5 +1,5 @@
 // MelVU Electron Main Process
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -63,7 +63,19 @@ function createWindow() {
     }
   ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
+
+  ipcMain.handle('melvu:saveAs', async (event, defaultName) => {
+    const filters = [
+      { name: 'MelVU Document', extensions: ['html','htm','css','js','mjs','json','md','markdown','py','go','txt'] },
+      { name: 'All Files', extensions: ['*'] }
+    ];
+    const { filePaths } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: defaultName || 'untitled.html',
+      filters
+    });
+    return filePaths && filePaths[0] ? filePaths[0] : null;
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

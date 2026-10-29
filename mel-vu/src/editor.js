@@ -1,10 +1,9 @@
 // MelEditor - UMD VSCode-class editor core (Node module.exports + window.MelEditor)
 (function (root, factory) {
   const api = factory();
+  root.MelEditor = api;
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
-  } else {
-    root.MelEditor = api;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   const AUTO_CLOSE = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'", '`': '`' };
@@ -16,6 +15,20 @@
   };
 
   const EXTRA_LANGS = { c: 'c', h: 'c', cpp: 'cpp', hpp: 'cpp', cs: 'csharp', rs: 'rust', java: 'java', php: 'php', rb: 'ruby', sh: 'shell', sql: 'sql', yaml: 'yaml', yml: 'yaml', txt: 'text' };
+
+  function detectLanguageFromContent(text) {
+    const t = String(text || '');
+    const s = t.trim();
+    if (/^<!doctype|<html[\s>]/i.test(s)) return 'html';
+    if (/^(#{1,6}\s|```|[-*+] |\d+\.\s)/m.test(s)) return 'markdown';
+    if (/[;#]\s*(font|margin|padding|display|position|background|color|border|width|height)[\s:]/m.test(s)) return 'css';
+    if (/^(import\s|export\s|const\s|let\s|var\s|function\s|class\s|def\s|package\s|fn\s|impl\s|using\s|<\?php|from\s)/m.test(s)) return 'javascript';
+    if (/^(BEGIN|END|CREATE|INSERT|SELECT|UPDATE|DELETE|ALTER|GRANT|PRAGMA)\b/m.test(s)) return 'sql';
+    if (/^(package\s|module\s|use\s|go\()/m.test(s)) return 'go';
+    if (/^(import\s+.*\nfrom\s|package\s+.*\nimport\s)/m.test(s)) return 'python';
+    if (/^(module\s|use\s+strict|pub\s+fn|fn\s+)/m.test(s)) return 'rust';
+    return 'text';
+  }
 
   function detectLanguage(fileName) {
     const name = String(fileName || '');
@@ -37,7 +50,7 @@
   class EditorDoc {
     constructor(text, language) {
       this.text = String(text == null ? '' : text);
-      this.language = language || detectLanguage('untitled');
+      this.language = language || detectLanguageFromContent(this.text);
       this.undoStack = [{ text: this.text }];
       this.redoStack = [];
       this.maxUndo = 200;
@@ -618,6 +631,7 @@
     AUTO_CLOSE: AUTO_CLOSE,
     EditorDoc: EditorDoc,
     detectLanguage: detectLanguage,
+    detectLanguageFromContent: detectLanguageFromContent,
     tokenize: tokenize,
     indentLines: indentLines,
     toggleComment: toggleComment,

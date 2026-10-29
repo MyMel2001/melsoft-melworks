@@ -1,10 +1,9 @@
 // MelCss - UMD CSS parsing/formatting/validation engine (Node module.exports + window.MelCss)
 (function (root, factory) {
   const api = factory();
+  root.MelCss = api;
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
-  } else {
-    root.MelCss = api;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   const KNOWN_PROPERTIES = new Set([

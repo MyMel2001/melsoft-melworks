@@ -1,10 +1,9 @@
 // MelDom - UMD minimal HTML parser/editor tree (Node module.exports + window.MelDom)
 (function (root, factory) {
   const api = factory();
+  root.MelDom = api;
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
-  } else {
-    root.MelDom = api;
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
