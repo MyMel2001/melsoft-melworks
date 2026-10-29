@@ -77,6 +77,15 @@ class MelSoundPlayer {
       gain.connect(this.masterGain);
       osc.start(now + e.time);
       osc.stop(now + e.time + e.duration);
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sawtooth';
+      osc2.frequency.value = noteToFrequency(e.midi);
+      gain2.gain.value = 0.25;
+      osc2.connect(gain2);
+      gain2.connect(this.masterGain);
+      osc2.start(now + e.time);
+      osc2.stop(now + e.time + e.duration);
     }
     return seq;
   }

@@ -43,7 +43,8 @@ function renderSequenceWav(project, sampleRate = 44100) {
     for (let s = 0; s < durSamples && startSample + s < totalSamples; s++) {
       const t = s / sampleRate;
       const env = Math.min(1, (durSamples - s) / release);
-      clean[startSample + s] += vol * env * (Math.sin(2 * Math.PI * freq * t) + 0.5 * Math.sin(2 * Math.PI * freq * 2 * t) + 0.25 * Math.sin(2 * Math.PI * freq * 3 * t));
+      const saw = 2 * Math.abs(2 * ((freq * t) % 1) - 1) - 1;
+      clean[startSample + s] += vol * env * (Math.sin(2 * Math.PI * freq * t) + 0.5 * Math.sin(2 * Math.PI * freq * 2 * t) + 0.25 * Math.sin(2 * Math.PI * freq * 3 * t) + 0.35 * saw);
     }
   }
   return writeWav(clean, sampleRate);
