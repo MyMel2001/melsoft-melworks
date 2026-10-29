@@ -2,6 +2,7 @@
 const { MelFfmpeg } = require('./ffmpeg');
 const { MelFilmBundle } = require('./bundle');
 const { MelFilmComp } = require('./comp');
+const { MelFilmProject } = require('./project');
 const { MelFilmTimeline } = require('./timeline');
 const { getTransition, XFADE_TRANSITIONS } = require('./transitions');
 
@@ -226,6 +227,33 @@ async function loadMfBundle(event) {
     alert('MelFilm bundle loaded: ' + names.join(', '));
   };
   reader.readAsDataURL(file);
+}
+
+function saveMfProject() {
+  const comp = getMfComp();
+  const project = new MelFilmProject({ name: comp.name, comps: [comp], settings: { resolution: '1920x1080', fps: comp.frameRate, format: 'mp4' } });
+  const blob = new Blob([JSON.stringify(project.toJSON())], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mel-film-project.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadMfProjectGui(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const project = MelFilmProject.fromJSON(e.target.result);
+      const comp = project.comps && project.comps[0];
+      if (comp) currentComp = comp;
+      alert('MelFilm project loaded: ' + project.name);
+    } catch (err) { alert('Failed to load MelFilm project: ' + err.message); }
+  };
+  reader.readAsText(file);
 }
 
 function getMfComp() {

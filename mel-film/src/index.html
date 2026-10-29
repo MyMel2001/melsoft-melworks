@@ -99,9 +99,12 @@
       <button class="mf-btn" id="mf-btn-add-layer" onclick="addMfLayer()">Add Layer</button>
       <button class="mf-btn" id="mf-btn-add-layer-src" onclick="document.getElementById('mf-layer-src-input').click()">Add Layer from Media...</button>
       <button class="mf-btn" id="mf-btn-add-picture" onclick="addMfPicture()">Add Picture...</button>
+      <button class="mf-btn" id="mf-btn-save-project" onclick="saveMfProject()">Save Project</button>
+      <button class="mf-btn" id="mf-btn-load-project" onclick="document.getElementById('mf-project-input').click()">Load Project...</button>
       <div class="mf-layer-list" id="mf-layer-list">No layers in comp.</div>
       <input type="file" id="mf-layer-src-input" accept="video/*,audio/*,image/*" style="display:none" onchange="onMfLayerSource(event)">
       <input type="file" id="mf-picture-input" accept="image/*" style="display:none" onchange="onMfPictureSource(event)">
+      <input type="file" id="mf-project-input" accept="application/json,.json" style="display:none" onchange="loadMfProjectGui(event)">
 
       <div class="mf-panel-title">Layer Tween</div>
       <label class="mf-field">Layer
