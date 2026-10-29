@@ -16,7 +16,8 @@
 * [FIXED] Tween translate math (position offsets were missing comp width/height scale).
 * [FIXED] Crossfade offset (was using beat count instead of clip duration).
 * [FIXED] Crossfade transition engine validated end-to-end (xfade + bad-input/unknown-transition rejection).
-* Still open: no image/sound importing support, no transitions UI wiring.
+* [FIXED] Transitions UI wired (transition select + duration + Crossfade Layers via layer sources).
+* [FIXED] Layer media import support added (Add Layer from Media... with video/audio/image sources).
 
 ## General
 
