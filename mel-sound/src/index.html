@@ -37,6 +37,12 @@
         <button class="ms-btn" id="ms-btn-del-pattern" onclick="deletePatternGui()">Delete Pattern</button>
       </div>
       <div id="ms-step-grid"></div>
+      <div class="ms-field">Pattern Chain</div>
+      <div class="ms-actions">
+        <button class="ms-btn" id="ms-btn-chain-add" onclick="addSelectedPatternToChain()">Add to Chain</button>
+        <button class="ms-btn" id="ms-btn-chain-remove" onclick="removePatternFromChainGui(document.getElementById('ms-pattern-select').value)">Remove from Chain</button>
+      </div>
+      <div class="ms-chain-list" id="ms-chain-list">Chain empty.</div>
     </div>
   </main>
 

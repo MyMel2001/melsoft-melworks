@@ -21,8 +21,40 @@ function newProject() {
 
 function refreshMelSoundGui() {
   renderPatternsGui();
+  renderChainGui();
   const sel = document.getElementById('ms-pattern-select');
   renderStepGrid(sel && sel.value ? sel.value : (currentProject && currentProject.patterns.length > 0 ? currentProject.patterns[0].id : null));
+}
+
+function renderChainGui() {
+  const listEl = document.getElementById('ms-chain-list');
+  if (!listEl) return;
+  const chainIds = (currentProject && currentProject.patternChain) || [];
+  if (chainIds.length === 0) {
+    listEl.innerHTML = '<div class="ms-grid-empty">Chain empty.</div>';
+    return;
+  }
+  listEl.innerHTML = chainIds.map((id) => {
+    const p = (currentProject.patterns || []).find((x) => x.id === id);
+    const name = p ? p.name : id;
+    const safeId = id.replace(/'/g, '');
+    return '<div class="ms-chain-row">' + name + ' <button class="ms-btn ms-btn-sm" onclick="removePatternFromChainGui(\'' + safeId + '\')">x</button></div>';
+  }).join('');
+}
+
+function addSelectedPatternToChain() {
+  if (!currentProject) return;
+  const sel = document.getElementById('ms-pattern-select');
+  const value = sel ? sel.value : '';
+  if (!value) { alert('Select a pattern first.'); return; }
+  currentProject.addPatternToChain(value);
+  renderChainGui();
+}
+
+function removePatternFromChainGui(patternId) {
+  if (!currentProject) return;
+  if (patternId) currentProject.removePatternFromChain(patternId);
+  renderChainGui();
 }
 
 function triggerOpen() {
