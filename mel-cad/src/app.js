@@ -1759,6 +1759,10 @@ async function handleFileOpen(event) {
 
 function loadDwgBuffer(buf, fileName) {
   try {
+    // Clear any previously loaded drawing before loading the new file
+    entities = [];
+    selectedEntity = null;
+
     const result = DwgParser.parse(buf);
     logCmd(`DWG parsed: Version ${result.version} (${result.versionName}), Size: ${result.fileSize} bytes`);
 
@@ -1811,6 +1815,7 @@ function loadDwgBuffer(buf, fileName) {
       zoomExtents();
     } else {
       draw();
+      zoomExtents();
     }
   } catch (err) {
     logCmd(`DWG Parse Error: ${err.message}`);
@@ -1823,6 +1828,8 @@ function loadDxfText(dxfText, fileName) {
     const doc = DxfDocument.parse(dxfText);
     logCmd(`DXF parsed: ${doc.layers.length} layers, ${doc.entities.length} entities`);
 
+    // Replace the layer table wholesale so stale layers from a previous file don't leak in
+    layers = [];
     for (const l of doc.layers) {
       if (!layers.some(existing => existing.name === l.name)) {
         layers.push({

@@ -310,6 +310,23 @@ function getNextKeyframe(layerIdx, startFrame) {
   return null;
 }
 
+// Elements stage move/resize edits should mutate. While on an interpolated
+// tween frame, edits drive the active tween pair (destination keyframe) instead
+// of writing a hard frame, so tweens stay dynamic instead of freezing into frames.
+function getTweenEditElements(frameIdx) {
+  const layer = layers[activeLayerIndex];
+  const frame = layer && layer.frames ? layer.frames[frameIdx] : null;
+  const eff = getEffectiveKeyframe(activeLayerIndex, frameIdx);
+  const midTween = eff && frame && eff.frame !== frameIdx && (eff.kf.isTween || eff.kf.isShapeTween);
+  if (midTween) {
+    const next = getNextKeyframe(activeLayerIndex, eff.frame);
+    const endFrame = (next && next.frame > eff.frame) ? next.frame : eff.frame;
+    const endKf = layers[activeLayerIndex].frames[endFrame];
+    return (endKf && endKf.elements) || [];
+  }
+  return (frame && frame.elements) || [];
+}
+
 // Compute interpolated elements for tween frames
 function getRenderElements(layerIdx, frameIdx) {
   const prev = getEffectiveKeyframe(layerIdx, frameIdx);
@@ -574,8 +591,11 @@ function handleStageMouseDown(e) {
   const curLayer = layers[activeLayerIndex];
   if (curLayer.locked || !curLayer.visible) return;
 
-  // Auto-insert keyframe if drawing on a holding frame
-  if (!curLayer.frames[currentFrame].isKeyframe) {
+  // Auto-insert keyframe if drawing on a holding frame. Mid-tween frames edit the
+  // active tween pair instead of freezing into a hard frame.
+  const effForInsert = getEffectiveKeyframe(activeLayerIndex, currentFrame);
+  const midTween = effForInsert && effForInsert.frame !== currentFrame && (effForInsert.kf.isTween || effForInsert.kf.isShapeTween);
+  if (!curLayer.frames[currentFrame].isKeyframe && !midTween) {
     insertKeyframe();
   }
   const kf = curLayer.frames[currentFrame];
@@ -593,7 +613,7 @@ function handleStageMouseDown(e) {
   if (currentTool === 'select' || currentTool === 'transform') {
     // Check if clicked on a transform handle first
     if (currentTool === 'transform' && selectedElementIndex !== -1) {
-      const el = kf.elements[selectedElementIndex];
+      const el = getTweenEditElements(currentFrame)[selectedElementIndex];
       const h = hitTestTransformHandles(pos.x, pos.y, el);
       if (h) {
         transformHandle = h;
@@ -685,7 +705,7 @@ function handleStageMouseMove(e) {
   }
 
   if ((currentTool === 'select' || currentTool === 'transform') && selectedElementIndex !== -1) {
-    const el = kf.elements[selectedElementIndex];
+    const el = getTweenEditElements(currentFrame)[selectedElementIndex];
     if (transformHandle) {
       applyTransform(el, transformHandle, pos.x - startX, pos.y - startY, pos, e.shiftKey);
       startX = pos.x;
@@ -700,8 +720,9 @@ function handleStageMouseMove(e) {
   } else if ((currentTool === 'select' || currentTool === 'transform') && selectedIndices.length > 0) {
     const deltaX = pos.x - startX;
     const deltaY = pos.y - startY;
+    const editEls = getTweenEditElements(currentFrame);
     for (const idx of selectedIndices) {
-      const el = kf.elements[idx];
+      const el = editEls[idx];
       if (!el || el.locked) continue;
       if (transformHandle) {
         applyTransform(el, transformHandle, deltaX, deltaY, pos, e.shiftKey);

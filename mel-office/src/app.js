@@ -570,10 +570,10 @@ function mergeSelectedCells() {
 }
 
 // Multi-Sheet Tabs
-function switchSheet(sheetName) {
+function switchSheet(sheetName, event) {
   currentSheetName = sheetName;
   document.querySelectorAll('.sheet-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  if (event && event.target && event.target.classList) event.target.classList.add('active');
   recalcExcelGrid();
   selectCell('A1');
 }
@@ -1060,9 +1060,13 @@ async function handleFileOpen(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = async (e) => {
-    const data = e.target.result;
-    if (file.name.endsWith('.docx')) {
+  const data = await new Promise((resolve, reject) => {
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsArrayBuffer(file);
+  });
+
+  if (file.name.endsWith('.docx')) {
       switchApp('word');
       try {
         const doc = await DocxDocument.fromBuffer(data);
@@ -1104,8 +1108,6 @@ async function handleFileOpen(event) {
     } else if (file.name.toLowerCase().endsWith('.pdf')) {
       openPdfFile(file);
     }
-  };
-  reader.readAsArrayBuffer(file);
 }
 
 function saveDocument() {

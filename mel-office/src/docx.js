@@ -125,7 +125,7 @@ class DocxDocument {
           if (r.underline) xml += `          <w:u w:val="single"/>\n`;
           if (r.strike) xml += `          <w:strike/>\n`;
           if (r.color) xml += `          <w:color w:val="${r.color.replace('#', '')}"/>\n`;
-          if (r.size) xml += `          <w:sz w:val="${r.size}"/>\n`;
+          if (r.size) xml += `          <w:sz w:val="${Math.round(r.size * 100)}"/>\n`;
           if (r.font) xml += `          <w:rFonts w:ascii="${DocxDocument.escapeXml(r.font)}" w:hAnsi="${DocxDocument.escapeXml(r.font)}"/>\n`;
           xml += `        </w:rPr>\n`;
           xml += `        <w:t xml:space="preserve">${DocxDocument.escapeXml(r.text)}</w:t>\n`;
@@ -222,7 +222,7 @@ class DocxDocument {
 
         let size = 24;
         const sizeMatch = rBody.match(/<w:sz\s+w:val="([^"]+)"/);
-        if (sizeMatch) size = parseInt(sizeMatch[1], 10);
+        if (sizeMatch) size = parseFloat(sizeMatch[1], 10) / 100;
 
         let text = '';
         const tRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;

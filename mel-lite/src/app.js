@@ -24,21 +24,28 @@ function resizeCanvas() {
   ctx.fillRect(0, 0, w, h);
 }
 
-function renderImage() {
-  if (!currentImage) return;
-  resizeCanvas();
+function renderImage(img) {
+  const target = img || currentImage;
+  if (!target) return;
+  const maxW = 1600;
+  const maxH = 1600;
+  const scale = Math.min(1, maxW / target.width, maxH / target.height);
+  const w = Math.max(1, Math.round(target.width * scale));
+  const h = Math.max(1, Math.round(target.height * scale));
+  canvas.width = w;
+  canvas.height = h;
   const off = document.createElement('canvas');
-  off.width = currentImage.width;
-  off.height = currentImage.height;
+  off.width = target.width;
+  off.height = target.height;
   const offCtx = off.getContext('2d');
-  offCtx.putImageData(new ImageData(currentImage.data, currentImage.width, currentImage.height), 0, 0);
-  ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+  offCtx.putImageData(new ImageData(target.data, target.width, target.height), 0, 0);
+  ctx.drawImage(off, 0, 0, w, h);
 }
 
 function previewAdjustments() {
   if (!currentImage) return;
   const outImg = MelLiteFilterEngine.apply(currentImage, adjustments);
-  renderImage();
+  renderImage(outImg);
   updateStatus();
 }
 

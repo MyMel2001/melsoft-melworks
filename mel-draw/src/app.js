@@ -183,6 +183,18 @@ function compositeCanvas() {
   });
 }
 
+// Scale the canvas display to fit the current document inside the viewport
+function fitCanvasToViewport() {
+  const viewport = document.getElementById('ps-viewport');
+  const canvas = document.getElementById('canvas-main');
+  if (!viewport || !canvas) return;
+  const availW = Math.max(50, viewport.clientWidth - 80); // .ps-viewport padding: 40px each side
+  const availH = Math.max(50, viewport.clientHeight - 80);
+  const scale = Math.min(availW / docWidth, availH / docHeight);
+  canvas.style.width = `${Math.max(1, Math.round(docWidth * scale))}px`;
+  canvas.style.height = `${Math.max(1, Math.round(docHeight * scale))}px`;
+}
+
 // --- Canvas Interactive Events ---
 function setupCanvasEvents() {
   const mainCanvas = document.getElementById('canvas-main');
@@ -1414,11 +1426,18 @@ async function handleFileOpen(e) {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
+      docWidth = img.width;
+      docHeight = img.height;
+      layers.forEach(l => { l.canvas.width = docWidth; l.canvas.height = docHeight; });
+      const bg = layers[0];
+      if (bg && bg.visible) { bg.ctx.fillStyle = '#ffffff'; bg.ctx.fillRect(0, 0, docWidth, docHeight); }
       addNewLayer();
       const cur = layers[activeLayerIndex];
       cur.name = file.name;
+      cur.ctx.clearRect(0, 0, docWidth, docHeight);
       cur.ctx.drawImage(img, 0, 0);
       compositeCanvas();
+      fitCanvasToViewport();
       renderLayersList();
       pushHistory(`Open Image: ${file.name}`);
       URL.revokeObjectURL(url);
@@ -1436,6 +1455,13 @@ function loadPsdBuffer(buf) {
 
     // Clear current layers
     layers = [];
+
+    const mainCanvas = document.getElementById('canvas-main');
+    const overlayCanvas = document.getElementById('canvas-overlay');
+    mainCanvas.width = docWidth;
+    mainCanvas.height = docHeight;
+    overlayCanvas.width = docWidth;
+    overlayCanvas.height = docHeight;
 
     // Convert PSD layers to app layers
     psd.layers.forEach(psdLayer => {
@@ -1466,6 +1492,7 @@ function loadPsdBuffer(buf) {
     activeLayerIndex = layers.length > 0 ? 0 : 0;
     renderLayersList();
     compositeCanvas();
+    fitCanvasToViewport();
     pushHistory('PSD Load');
   } catch (e) {
     alert('Failed to load PSD: ' + e.message);
