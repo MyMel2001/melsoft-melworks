@@ -138,9 +138,28 @@ class MelFfmpeg {
       segments.push(finalLabel + parts.join(',') + '[vout]');
       finalLabel = '[vout]';
     }
+    const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp)$/i;
+    const audioIdxs = [];
+    clips.forEach((c, i) => { if (c && c.source && !IMAGE_EXT.test(c.source)) audioIdxs.push(i); });
+    let audioOutLabel = null;
+    if (audioIdxs.length > 0) {
+      if (audioIdxs.length === 1) {
+        audioOutLabel = '[aout]';
+        segments.push('[' + audioIdxs[0] + ':a]anull[' + 'aout' + ']');
+      } else {
+        let acc = '[' + audioIdxs[0] + ':a]';
+        for (let k = 1; k < audioIdxs.length; k++) {
+          const nextLabel = 'am' + k;
+          segments.push(acc + '[' + audioIdxs[k] + ':a]amix=inputs=2[' + nextLabel + ']');
+          acc = '[' + nextLabel + ']';
+        }
+        audioOutLabel = acc;
+      }
+    }
     args.push('-filter_complex', segments.join(';') + ';');
     args.push('-map', finalLabel);
-    args.push('-map', '0:a?');
+    if (audioOutLabel) args.push('-map', audioOutLabel);
+    else args.push('-map', '0:a?');
     if (fps) args.push('-r', String(fps));
     args.push('-c:v', 'libx264');
     args.push('-pix_fmt', 'yuv420p');
