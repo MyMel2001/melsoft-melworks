@@ -565,3 +565,15 @@ body {
   font-size: 11px;
   color: #888888;
 }
+
+/* Aesthetic polish: keyboard focus + control accents */
+.btn-ctrl:focus-visible,
+.btn-flash-tool:focus-visible,
+.btn-mod:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
+}
+
+input[type="range"] {
+  accent-color: #38bdf8;
+}

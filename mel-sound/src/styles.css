@@ -1,7 +1,7 @@
 /* MelSound Studio styles */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
   background: #101418;
   color: #e2e8f0;
   overflow: hidden;
@@ -11,8 +11,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  background: #1e293b;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #1e293b 0%, #151d2b 100%);
   border-bottom: 1px solid #334155;
 }
 
@@ -20,6 +20,7 @@ body {
   font-size: 18px;
   font-weight: 700;
   color: #a78bfa;
+  letter-spacing: 0.2px;
 }
 
 .ms-actions {
@@ -28,13 +29,28 @@ body {
 }
 
 .ms-btn {
-  padding: 6px 12px;
+  padding: 7px 14px;
   background: #a78bfa;
   color: #0f172a;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 12px;
   cursor: pointer;
+  transition: filter 0.12s ease, transform 0.05s ease;
+}
+
+.ms-btn:hover {
+  filter: brightness(1.12);
+}
+
+.ms-btn:active {
+  transform: translateY(1px);
+}
+
+.ms-btn:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 2px;
 }
 
 .ms-workspace {
@@ -46,8 +62,9 @@ body {
 
 .ms-project-info {
   padding: 20px;
-  background: #1e293b;
-  border-radius: 8px;
+  background: #16213a;
+  border: 1px solid #334155;
+  border-radius: 10px;
   min-width: 420px;
 }
 

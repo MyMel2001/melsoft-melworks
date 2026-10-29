@@ -738,3 +738,17 @@ body {
 .pdf-container {
   position: relative;
 }
+
+/* Aesthetic polish: keyboard focus + control accents */
+.app-btn:focus-visible,
+.btn-tool:focus-visible,
+.btn-tool-mini:focus-visible,
+.fx-action-btn:focus-visible,
+.btn-add-sheet:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+input[type="range"] {
+  accent-color: #2563eb;
+}

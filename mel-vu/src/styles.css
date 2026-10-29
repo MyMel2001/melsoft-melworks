@@ -14,8 +14,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  background: #1e293b;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #1e293b 0%, #16213a 100%);
   border-bottom: 1px solid #334155;
 }
 
@@ -23,6 +23,7 @@ body {
   font-size: 18px;
   font-weight: 700;
   color: #38bdf8;
+  letter-spacing: 0.2px;
 }
 
 .melvu-actions {
@@ -31,12 +32,13 @@ body {
 }
 
 .melvu-btn {
-  padding: 6px 12px;
+  padding: 7px 14px;
   background: #0f172a;
   color: #e2e8f0;
   border: 1px solid #334155;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -44,15 +46,16 @@ body {
   background: #1e293b;
 }
 
+.melvu-btn:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
 .melvu-workspace {
   flex: 1;
   display: flex;
   min-height: 0;
   background: #020617;
-}
-
-.melvu-workspace.melvu-hidden {
-  display: none;
 }
 
 .melvu-editor {
@@ -87,7 +90,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 14px;
+  padding: 5px 14px;
   background: #1e293b;
   border-top: 1px solid #334155;
   font-size: 11px;

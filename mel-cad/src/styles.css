@@ -466,3 +466,16 @@ body {
   color: white;
   border-color: #38bdf8;
 }
+
+/* Aesthetic polish: keyboard focus + control accents */
+.btn-cad:focus-visible,
+.btn-cad-tool:focus-visible,
+.btn-cad-q:focus-visible,
+.btn-toggle:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
+}
+
+input[type="range"] {
+  accent-color: #38bdf8;
+}

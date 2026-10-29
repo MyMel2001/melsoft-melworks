@@ -5,7 +5,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
   overflow: hidden;
@@ -18,8 +18,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  background: #1e293b;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #1e293b 0%, #16213a 100%);
   border-bottom: 1px solid #334155;
 }
 
@@ -27,6 +27,7 @@ body {
   font-size: 18px;
   font-weight: 700;
   color: #38bdf8;
+  letter-spacing: 0.2px;
 }
 
 .ml-actions {
@@ -35,13 +36,28 @@ body {
 }
 
 .ml-btn {
-  padding: 6px 12px;
+  padding: 7px 14px;
   background: #38bdf8;
   color: #0f172a;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 600;
+  font-size: 12px;
   cursor: pointer;
+  transition: filter 0.12s ease, transform 0.05s ease;
+}
+
+.ml-btn:hover {
+  filter: brightness(1.1);
+}
+
+.ml-btn:active {
+  transform: translateY(1px);
+}
+
+.ml-btn:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
 }
 
 .ml-workspace {
@@ -57,7 +73,7 @@ body {
 .ml-canvas {
   max-width: 100%;
   max-height: 100%;
-  background: repeating-conic-gradient(#1e293b 0% 25%, #0f172a 0% 50%) 0 0 / 20px 20px;
+  background: repeating-conic-gradient(#1e293b 0% 25%, #0b1220 0% 50%) 0 0 / 20px 20px;
 }
 
 .ml-panel {
@@ -65,16 +81,19 @@ body {
   top: 56px;
   right: 0;
   bottom: 0;
-  width: 240px;
-  padding: 14px;
-  background: #1e293b;
+  width: 248px;
+  padding: 16px;
+  background: #16213a;
   border-left: 1px solid #334155;
   overflow-y: auto;
 }
 
 .ml-panel-title {
+  font-size: 12px;
   font-weight: 700;
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
   color: #38bdf8;
 }
 
@@ -82,24 +101,26 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 8px 0;
+  margin: 10px 0;
   font-size: 12px;
 }
 
 .ml-slider-row input[type="range"] {
   flex: 1;
+  accent-color: #38bdf8;
 }
 
 .ml-slider-row span {
   width: 44px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .ml-wb-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 8px 0;
+  margin: 10px 0;
   font-size: 12px;
 }
 
@@ -108,7 +129,7 @@ body {
 }
 
 .ml-status {
-  margin-top: 14px;
+  margin-top: 16px;
   font-size: 11px;
   color: #94a3b8;
 }
