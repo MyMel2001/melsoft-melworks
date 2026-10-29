@@ -181,3 +181,74 @@ body {
   cursor: pointer;
   padding: 2px 8px;
 }
+
+/* MelFilm Tween Panel */
+.mf-tween-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 10px;
+  margin: 6px 0;
+}
+
+.mf-tween-actions {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.mf-scrub {
+  flex: 1;
+  accent-color: #f87171;
+}
+
+.mf-tween-time {
+  min-width: 96px;
+  text-align: right;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.mf-num {
+  width: 72px;
+  padding: 3px 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+}
+
+.mf-keyframe-list {
+  margin-top: 8px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.mf-keyframe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-bottom: 1px solid #334155;
+  cursor: pointer;
+}
+
+.mf-keyframe-row:hover {
+  background: #0f172a;
+}
+
+.mf-keyframe-active {
+  color: #f87171;
+  font-weight: 700;
+}
+
+.mf-tween-canvas {
+  display: block;
+  width: 640px;
+  max-width: 100%;
+  margin-top: 10px;
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 6px;
+}

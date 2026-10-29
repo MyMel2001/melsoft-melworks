@@ -119,6 +119,98 @@ async function runTests() {
   assert.strictEqual(mfBack.getComp('Comp1').layers.length, 1, 'MelFilm project JSON roundtrips comp layers');
   console.log('✓ MelFilm project model validated');
 
+  // 9. Test MelFilm keyframe tween engine (sampling, easing, expressions)
+  const { addKeyframe, removeKeyframe, getKeyframe, sampleKeyframes, toFfmpegExpr, buildTweenExpressions } = require('./src/tween');
+
+  const twLayer = { keyframes: [] };
+  addKeyframe(twLayer, 0, { x: 0, scale: 1, opacity: 1 }, 'linear');
+  addKeyframe(twLayer, 10, { x: 100, scale: 0.5, opacity: 0.2 }, 'linear');
+  const mid = sampleKeyframes(twLayer.keyframes, 5);
+  assert.strictEqual(mid.x, 50, 'MelFilm tween linear midpoint is the average');
+  assert.strictEqual(mid.scale, 0.75, 'MelFilm tween linear midpoint scale interpolated');
+  assert.strictEqual(sampleKeyframes(twLayer.keyframes, 0).x, 0, 'MelFilm tween start endpoint exact');
+  assert.strictEqual(sampleKeyframes(twLayer.keyframes, 10).scale, 0.5, 'MelFilm tween end endpoint exact');
+  assert.strictEqual(sampleKeyframes(twLayer.keyframes, 999).x, 100, 'MelFilm tween clamps past last keyframe');
+  assert.deepStrictEqual(sampleKeyframes([], 3), { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, 'MelFilm tween empty keyframes fall back to defaults');
+
+  const ioLayer = { keyframes: [
+    { frame: 0, easing: 'easeInOut', props: { x: 0 } },
+    { frame: 10, easing: 'linear', props: { x: 100 } }
+  ] };
+  const ioMid = sampleKeyframes(ioLayer.keyframes, 5);
+  assert.strictEqual(ioMid.x, 50, 'MelFilm tween easeInOut midpoint is symmetric (average)');
+  assert.strictEqual(sampleKeyframes(ioLayer.keyframes, 0).x, 0, 'MelFilm tween easeInOut start exact');
+  assert.strictEqual(sampleKeyframes(ioLayer.keyframes, 10).x, 100, 'MelFilm tween easeInOut end exact');
+  const inLayer = { keyframes: [{ frame: 0, easing: 'easeIn', props: { x: 0 } }, { frame: 10, props: { x: 100 } }] };
+  assert.ok(sampleKeyframes(inLayer.keyframes, 5).x < 50, 'MelFilm tween easeIn midpoint below average');
+  const outLayer = { keyframes: [{ frame: 0, easing: 'easeOut', props: { x: 0 } }, { frame: 10, props: { x: 100 } }] };
+  assert.ok(sampleKeyframes(outLayer.keyframes, 5).x > 50, 'MelFilm tween easeOut midpoint above average');
+  const bounceLayer = { keyframes: [{ frame: 0, easing: 'bounceOut', props: { x: 0 } }, { frame: 10, props: { x: 100 } }] };
+  assert.ok(sampleKeyframes(bounceLayer.keyframes, 5).x > 0 && sampleKeyframes(bounceLayer.keyframes, 5).x < 100, 'MelFilm tween bounceOut midpoint bounded');
+
+  const kmLayer = { keyframes: [] };
+  const added = addKeyframe(kmLayer, 4, { scale: 2 }, 'easeIn');
+  assert.strictEqual(added.easing, 'easeIn', 'MelFilm addKeyframe stores easing');
+  assert.strictEqual(getKeyframe(kmLayer, 4).props.opacity, 1, 'MelFilm addKeyframe applies prop defaults');
+  addKeyframe(kmLayer, 4, { scale: 3 }, 'linear');
+  assert.strictEqual(kmLayer.keyframes.length, 1, 'MelFilm addKeyframe replaces same-frame keyframe');
+  assert.strictEqual(getKeyframe(kmLayer, 4).props.scale, 3, 'MelFilm addKeyframe overwrites same-frame props');
+  addKeyframe(kmLayer, 9, { opacity: 0.5 });
+  assert.strictEqual(kmLayer.keyframes.length, 2, 'MelFilm addKeyframe appends and sorts');
+  assert.strictEqual(removeKeyframe(kmLayer, 4), 1, 'MelFilm removeKeyframe removes one keyframe');
+  assert.strictEqual(removeKeyframe(kmLayer, 4), 0, 'MelFilm removeKeyframe reports missing keyframe');
+  assert.strictEqual(getKeyframe(kmLayer, 4), null, 'MelFilm getKeyframe returns null after removal');
+  console.log('✓ MelFilm keyframe sampling/easing/add-remove validated');
+
+  // 10. Test MelFilm comp keyframe JSON roundtrip + FFMPEG tween expressions
+  const twComp = MelFilmComp.create('TweenComp');
+  twComp.frameRate = 24;
+  const twCompLayer = twComp.addLayer('Animated', 'clip.mp4');
+  twComp.addKeyframe(twCompLayer.id, 0, { scale: 1, opacity: 1 }, 'linear');
+  twComp.addKeyframe(twCompLayer.id, 24, { scale: 0.5, opacity: 0.2 }, 'easeInOut');
+  assert.strictEqual(twComp.frameDuration(), 1 / 24, 'MelFilm comp frameDuration = 1 / frameRate');
+  assert.strictEqual(twComp.durationSeconds(), 0, 'MelFilm comp durationSeconds uses frameCount');
+  twComp.frameCount = 48;
+  assert.strictEqual(twComp.durationSeconds(), 2, 'MelFilm comp durationSeconds = frameCount / frameRate');
+  const twJson = twComp.toJSON();
+  assert.strictEqual(twJson.layers[0].keyframes.length, 2, 'MelFilm comp toJSON serializes keyframes');
+  const twBack = MelFilmComp.fromJSON(twJson);
+  assert.strictEqual(twBack.layers[0].keyframes.length, 2, 'MelFilm comp JSON roundtrip preserves keyframes');
+  assert.strictEqual(twBack.sampleLayer(twBack.layers[0].id, 12).scale, 0.75, 'MelFilm comp sampleLayer interpolates roundtripped keyframes');
+  const legacy = MelFilmComp.fromJSON({ name: 'Old', layers: [{ id: 'layer-1', name: 'L', source: 'a.mp4' }] });
+  assert.deepStrictEqual(legacy.layers[0].keyframes, [], 'MelFilm comp fromJSON gives old layers empty keyframes');
+
+  const exprs = buildTweenExpressions({ keyframes: [
+    { frame: 0, easing: 'linear', props: { scale: 1, opacity: 1, x: 0, y: 0, rotation: 0 } },
+    { frame: 24, easing: 'linear', props: { scale: 0.5, opacity: 1, x: 0, y: 0, rotation: 0 } }
+  ] }, 24);
+  assert.ok(typeof exprs.scale === 'string' && exprs.scale.includes('if(between(t'), 'MelFilm buildTweenExpressions animates scale with if(between(t');
+  assert.strictEqual(exprs.opacity, null, 'MelFilm buildTweenExpressions leaves static opacity null');
+  assert.strictEqual(exprs.x, null, 'MelFilm buildTweenExpressions leaves static x null');
+  assert.strictEqual(exprs.rotation, null, 'MelFilm buildTweenExpressions leaves static rotation null');
+  const piece = toFfmpegExpr([[0.5, [0, 24]], [1]], 24);
+  assert.ok(piece.includes('if(between(t,0,1)'), 'MelFilm toFfmpegExpr builds between(t,...) from frames');
+  console.log('✓ MelFilm comp keyframes + FFMPEG tween expressions validated');
+
+  // 11. Test MelFilm FFMPEG tween render (real renderTween on 2s lavfi clip)
+  const tweenOutPath = path.join(os.tmpdir(), 'mel-film-tween-out.mp4');
+  let tweenErr = null;
+  try {
+    await MelFfmpeg.renderTween({ inputPath: srcPath, outputPath: tweenOutPath, keyframes: [], frameRate: 10 });
+  } catch (e) { tweenErr = e; }
+  assert.ok(tweenErr && /non-empty keyframes/.test(tweenErr.message), 'MelFilm renderTween rejects empty keyframes');
+  await MelFfmpeg.renderTween({
+    inputPath: srcPath,
+    outputPath: tweenOutPath,
+    keyframes: [
+      { frame: 0, easing: 'linear', props: { scale: 1, opacity: 1 } },
+      { frame: 19, easing: 'linear', props: { scale: 0.5, opacity: 0.2 } }
+    ],
+    frameRate: 10
+  });
+  assert(fs.existsSync(tweenOutPath) && fs.statSync(tweenOutPath).size > 0, 'FFMPEG tween render produced output');
+  console.log('✓ MelFilm FFMPEG tween render validated');
+
   console.log('\nALL MELFILM TESTS PASSED SUCCESSFULLY!\n');
 }
 

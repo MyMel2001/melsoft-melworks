@@ -1,4 +1,10 @@
 // MelFilm After Effects-style Composition model (layer stack within a comp).
+const { addKeyframe, removeKeyframe, sampleLayer } = require('./tween');
+
+function withKeyframes(layer) {
+  return { id: layer.id, name: layer.name, source: layer.source, keyframes: Array.isArray(layer.keyframes) ? layer.keyframes : [] };
+}
+
 class MelFilmComp {
   constructor({ name = 'Comp', width = 1920, height = 1080, frameRate = 24, frameCount = 0, layers = [] } = {}) {
     this.name = name;
@@ -6,7 +12,7 @@ class MelFilmComp {
     this.height = height;
     this.frameRate = frameRate;
     this.frameCount = frameCount;
-    this.layers = Array.isArray(layers) ? layers : [];
+    this.layers = Array.isArray(layers) ? layers.map(withKeyframes) : [];
   }
 
   static create(name) {
@@ -17,7 +23,8 @@ class MelFilmComp {
     const layer = {
       id: 'layer-' + (++MelFilmComp.layerSeq),
       name: name || ('Layer ' + (this.layers.length + 1)),
-      source: source || ''
+      source: source || '',
+      keyframes: []
     };
     this.layers.push(layer);
     return layer;
@@ -33,6 +40,32 @@ class MelFilmComp {
     return this.layers.find((l) => l.id === layerId) || null;
   }
 
+  addKeyframe(layerId, frame, props, easing) {
+    const layer = this.getLayer(layerId);
+    if (!layer) return null;
+    return addKeyframe(layer, frame, props, easing);
+  }
+
+  removeKeyframe(layerId, frame) {
+    const layer = this.getLayer(layerId);
+    if (!layer) return 0;
+    return removeKeyframe(layer, frame);
+  }
+
+  sampleLayer(layerId, frame) {
+    const layer = this.getLayer(layerId);
+    if (!layer) return null;
+    return sampleLayer(layer, frame);
+  }
+
+  frameDuration() {
+    return this.frameRate > 0 ? 1 / this.frameRate : 0;
+  }
+
+  durationSeconds() {
+    return this.frameCount * this.frameDuration();
+  }
+
   toJSON() {
     return {
       name: this.name,
@@ -40,7 +73,7 @@ class MelFilmComp {
       height: this.height,
       frameRate: this.frameRate,
       frameCount: this.frameCount,
-      layers: this.layers.map((l) => ({ id: l.id, name: l.name, source: l.source }))
+      layers: this.layers.map(withKeyframes)
     };
   }
 
@@ -50,9 +83,9 @@ class MelFilmComp {
       width: json.width || 1920,
       height: json.height || 1080,
       frameRate: json.frameRate || 24,
-      frameCount: json.frameCount || 0
+      frameCount: json.frameCount || 0,
+      layers: json.layers || []
     });
-    comp.layers = Array.isArray(json.layers) ? json.layers.map((l) => ({ id: l.id, name: l.name, source: l.source })) : [];
     return comp;
   }
 }

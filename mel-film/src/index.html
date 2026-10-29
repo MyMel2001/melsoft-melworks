@@ -74,6 +74,40 @@
       <button class="mf-btn" id="mf-btn-add-comp" onclick="createMfComp()">New Comp</button>
       <button class="mf-btn" id="mf-btn-add-layer" onclick="addMfLayer()">Add Layer</button>
       <div class="mf-layer-list" id="mf-layer-list">No layers in comp.</div>
+
+      <div class="mf-panel-title">Layer Tween</div>
+      <label class="mf-field">Layer
+        <select id="mf-tween-layer" class="mf-select" onchange="selectMfTweenLayer(this.value)">
+          <option value="">No layers</option>
+        </select>
+      </label>
+      <label class="mf-field">Scrub
+        <input type="range" id="mf-tween-frame" class="mf-scrub" min="0" max="60" value="0" oninput="setMfTweenFrame(this.value)">
+        <span id="mf-tween-time" class="mf-tween-time">f 0 | 0.00s</span>
+      </label>
+      <label class="mf-field">Easing
+        <select id="mf-tween-easing" class="mf-select">
+          <option value="linear">Linear</option>
+          <option value="easeIn">Ease In</option>
+          <option value="easeOut">Ease Out</option>
+          <option value="easeInOut" selected>Ease In/Out</option>
+          <option value="bounceOut">Bounce Out</option>
+        </select>
+      </label>
+      <div class="mf-tween-grid">
+        <label class="mf-field">X <input type="number" id="mf-tween-x" class="mf-num" step="1" value="0"></label>
+        <label class="mf-field">Y <input type="number" id="mf-tween-y" class="mf-num" step="1" value="0"></label>
+        <label class="mf-field">Scale <input type="number" id="mf-tween-scale" class="mf-num" step="0.01" value="1"></label>
+        <label class="mf-field">Rotation <input type="number" id="mf-tween-rotation" class="mf-num" step="1" value="0"></label>
+        <label class="mf-field">Opacity <input type="number" id="mf-tween-opacity" class="mf-num" step="0.01" min="0" max="1" value="1"></label>
+      </div>
+      <div class="mf-tween-actions">
+        <button class="mf-btn" id="mf-btn-add-keyframe" onclick="addMfKeyframe()">Add Keyframe</button>
+        <button class="mf-btn" id="mf-btn-del-keyframe" onclick="deleteMfKeyframe()">Delete Keyframe</button>
+        <button class="mf-btn" id="mf-btn-render-tween" onclick="renderMfTween()">Render Tween</button>
+      </div>
+      <div class="mf-keyframe-list" id="mf-keyframe-list"></div>
+      <canvas id="mf-tween-canvas" class="mf-tween-canvas" width="640" height="360"></canvas>
     </div>
   </main>
 

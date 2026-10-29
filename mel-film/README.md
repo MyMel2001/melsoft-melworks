@@ -6,6 +6,7 @@ MelFilm - Professional Video Editing Studio powered by FFMPEG.
 - Open video files (mp4, webm, mov).
 - Render/export video via FFMPEG (resolution scaling, format conversion, fps control).
 - Capture poster frames from video timelines.
+- Keyframe tweening on comp layers (x/y/scale/rotation/opacity with linear, easeIn, easeOut, easeInOut and bounceOut easing), with timeline scrubbing, canvas preview and FFMPEG expression rendering.
 
 ## Commands
 - `npm start` - launch Electron app.
