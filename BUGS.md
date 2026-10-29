@@ -10,6 +10,7 @@
 * [FIXED] Image preview doesn't scale to viewport - canvas now scales to container.
 * [FIXED] Preview doesn't preview changes before application - live preview + Apply added.
 * [FIXED] Saving/loading missing - project save/load added, menu export action repaired, dead code removed.
+* [FIXED] Blur/pixelate/border filters missing - engine implementations, pipeline wiring, UI controls, tests added.
 
 ## MelFilm
 

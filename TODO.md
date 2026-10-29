@@ -7,8 +7,12 @@
 ## MelFilm
 
 * [x] Add tweening.
-* [ ] Add image/sound importing support.
-* [ ] Add transitions.
+* [x] Add image/sound importing support.
+* [x] Add transitions.
+
+## MelLite
+
+* [x] Add blur, pixelate, border filters (engine + pipeline + UI + tests).
 
 ## MelVU
 
