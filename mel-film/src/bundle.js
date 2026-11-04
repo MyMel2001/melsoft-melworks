@@ -2,8 +2,17 @@
 const { createRequire } = require('module');
 const path = require('path');
 const zlib = require('zlib');
-const melOfficeRequire = createRequire(path.join(__dirname, '..', '..', 'mel-office', 'package.json'));
-const JSZip = melOfficeRequire('jszip');
+let JSZip;
+try {
+  JSZip = require('jszip');
+} catch (e) {
+  try {
+    const melOfficeRequire = createRequire(path.join(__dirname, '..', '..', 'mel-office', 'package.json'));
+    JSZip = melOfficeRequire('jszip');
+  } catch (e2) {
+    JSZip = (typeof window !== 'undefined') ? window.JSZip : null;
+  }
+}
 
 class MelFilmBundle {
   static async saveAepx(projectName, xml) {

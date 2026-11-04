@@ -1,0 +1,9 @@
+{
+  "name": "mel-mcp",
+  "version": "1.0.0",
+  "description": "MelSoft MCP Server - Stdio JSON-RPC Bridge for AI Agents",
+  "main": "server.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}

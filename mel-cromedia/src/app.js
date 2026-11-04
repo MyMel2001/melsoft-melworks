@@ -1612,15 +1612,6 @@ function placeSelectedSymbol() {
   renderStage();
 }
 
-// ActionScript Editor
-function saveCurrentFrameActions() {
-  const curFrameData = getFrameData(activeLayerIndex, currentFrame);
-  if (curFrameData) {
-    curFrameData.actions = document.getElementById('actionscript-input').value;
-    renderTimeline();
-  }
-}
-
 // ActionScript Editor & AVM2 Tooling
 function saveCurrentFrameActions() {
   const curFrameData = getFrameData(activeLayerIndex, currentFrame);

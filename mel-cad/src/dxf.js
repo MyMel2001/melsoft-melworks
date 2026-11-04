@@ -143,39 +143,90 @@ class DxfDocument {
 
   // Parse ASCII DXF string
   static parse(dxfText) {
-    const lines = dxfText.split(/\r?\n/).map(l => l.trim());
+    // Robust line tokenizer: handles CRLF, blank lines, comments (group 999)
+    const rawLines = dxfText.split(/\r?\n/);
+    const pairs = [];
+    let curCode = null;
+    for (let j = 0; j < rawLines.length; j++) {
+      const line = rawLines[j].trim();
+      if (curCode === null) {
+        if (!line) continue;
+        const codeNum = parseInt(line, 10);
+        if (isNaN(codeNum)) continue;
+        curCode = codeNum;
+      } else {
+        if (curCode === 999) {
+          curCode = null;
+          continue;
+        }
+        pairs.push({ code: curCode, val: line });
+        curCode = null;
+      }
+    }
+
     const layers = [];
     const entities = [];
+    let pIdx = 0;
 
-    let i = 0;
-    while (i < lines.length - 1) {
-      const code = parseInt(lines[i], 10);
-      const val = lines[i + 1];
-      i += 2;
+    while (pIdx < pairs.length) {
+      const { code, val } = pairs[pIdx];
+      pIdx++;
+
+      if (code === 0 && val === 'EOF') break;
 
       if (code === 0 && val === 'LAYER') {
         const layer = { name: '0', color: 7, linetype: 'CONTINUOUS' };
-        while (i < lines.length - 1) {
-          const lCode = parseInt(lines[i], 10);
-          const lVal = lines[i + 1];
-          if (lCode === 0) break;
-          i += 2;
+        while (pIdx < pairs.length) {
+          if (pairs[pIdx].code === 0) break;
+          const { code: lCode, val: lVal } = pairs[pIdx];
+          pIdx++;
           if (lCode === 2) layer.name = lVal;
           if (lCode === 62) layer.color = parseInt(lVal, 10);
           if (lCode === 6) layer.linetype = lVal;
         }
         layers.push(layer);
-      } else if (code === 0 && (val === 'LINE' || val === 'CIRCLE' || val === 'ARC' || val === 'LWPOLYLINE' || val === 'TEXT' || val === 'DIMENSION')) {
-        const entType = val;
+      } else if (code === 0 && val === 'POLYLINE') {
+        const ent = { type: 'LWPOLYLINE', layer: '0', color: null, closed: false, vertices: [] };
+        while (pIdx < pairs.length) {
+          if (pairs[pIdx].code === 0) {
+            const nextType = pairs[pIdx].val;
+            if (nextType === 'VERTEX') {
+              pIdx++;
+              let vx = 0, vy = 0;
+              while (pIdx < pairs.length && pairs[pIdx].code !== 0) {
+                const { code: vc, val: vv } = pairs[pIdx];
+                pIdx++;
+                if (vc === 10) vx = parseFloat(vv);
+                if (vc === 20) vy = parseFloat(vv);
+              }
+              ent.vertices.push({ x: vx, y: vy });
+            } else if (nextType === 'SEQEND') {
+              pIdx++;
+              while (pIdx < pairs.length && pairs[pIdx].code !== 0) pIdx++;
+              break;
+            } else {
+              break;
+            }
+          } else {
+            const { code: eCode, val: eVal } = pairs[pIdx];
+            pIdx++;
+            if (eCode === 8) ent.layer = eVal;
+            if (eCode === 62) ent.color = parseInt(eVal, 10);
+            if (eCode === 70) ent.closed = (parseInt(eVal, 10) & 1) === 1;
+          }
+        }
+        entities.push(ent);
+      } else if (code === 0 && (val === 'LINE' || val === 'CIRCLE' || val === 'ARC' || val === 'LWPOLYLINE' || val === 'TEXT' || val === 'MTEXT' || val === 'DIMENSION' || val === 'POINT' || val === 'SOLID' || val === 'ELLIPSE')) {
+        const entType = (val === 'MTEXT') ? 'TEXT' : val;
         const ent = { type: entType, layer: '0', color: null };
         const vertices = [];
-
         let curX = 0, curY = 0;
-        while (i < lines.length - 1) {
-          const eCode = parseInt(lines[i], 10);
-          const eVal = lines[i + 1];
-          if (eCode === 0) break;
-          i += 2;
+        let p1 = { x: 0, y: 0 }, p2 = { x: 0, y: 0 }, p3 = { x: 0, y: 0 }, p4 = null;
+
+        while (pIdx < pairs.length) {
+          if (pairs[pIdx].code === 0) break;
+          const { code: eCode, val: eVal } = pairs[pIdx];
+          pIdx++;
 
           if (eCode === 8) ent.layer = eVal;
           if (eCode === 62) ent.color = parseInt(eVal, 10);
@@ -206,18 +257,51 @@ class DxfDocument {
             if (eCode === 10) ent.x = parseFloat(eVal);
             if (eCode === 20) ent.y = parseFloat(eVal);
             if (eCode === 40) ent.height = parseFloat(eVal);
-            if (eCode === 1) ent.text = eVal;
+            if (eCode === 1) ent.text = (ent.text ? ent.text + '\n' : '') + eVal.replace(/\\P/g, '\n').replace(/\\\{.*?\}/g, '');
           } else if (entType === 'DIMENSION') {
             if (eCode === 10) ent.x1 = parseFloat(eVal);
             if (eCode === 20) ent.y1 = parseFloat(eVal);
             if (eCode === 11) ent.x2 = parseFloat(eVal);
             if (eCode === 21) ent.y2 = parseFloat(eVal);
             if (eCode === 1) ent.text = eVal;
+          } else if (entType === 'POINT') {
+            if (eCode === 10) ent.x = parseFloat(eVal);
+            if (eCode === 20) ent.y = parseFloat(eVal);
+          } else if (entType === 'SOLID') {
+            if (eCode === 10) p1.x = parseFloat(eVal);
+            if (eCode === 20) p1.y = parseFloat(eVal);
+            if (eCode === 11) p2.x = parseFloat(eVal);
+            if (eCode === 21) p2.y = parseFloat(eVal);
+            if (eCode === 12) p3.x = parseFloat(eVal);
+            if (eCode === 22) p3.y = parseFloat(eVal);
+            if (eCode === 13) { p4 = p4 || { x: 0, y: 0 }; p4.x = parseFloat(eVal); }
+            if (eCode === 23) { p4 = p4 || { x: 0, y: 0 }; p4.y = parseFloat(eVal); }
+          } else if (entType === 'ELLIPSE') {
+            if (eCode === 10) ent.cx = parseFloat(eVal);
+            if (eCode === 20) ent.cy = parseFloat(eVal);
+            if (eCode === 11) ent.majorX = parseFloat(eVal);
+            if (eCode === 21) ent.majorY = parseFloat(eVal);
+            if (eCode === 40) ent.ratio = parseFloat(eVal);
           }
         }
 
-        if (entType === 'LWPOLYLINE') ent.vertices = vertices;
-        entities.push(ent);
+        if (entType === 'LWPOLYLINE') {
+          ent.vertices = vertices;
+          entities.push(ent);
+        } else if (entType === 'SOLID') {
+          ent.type = 'LWPOLYLINE';
+          ent.closed = true;
+          ent.vertices = [p1, p2, (p4 ? p4 : p3), (p4 ? p3 : p2)];
+          entities.push(ent);
+        } else if (entType === 'ELLIPSE') {
+          const rx = Math.hypot(ent.majorX || 1, ent.majorY || 0) || 10;
+          const ry = rx * (ent.ratio || 0.5);
+          ent.type = 'CIRCLE';
+          ent.radius = (rx + ry) / 2;
+          entities.push(ent);
+        } else {
+          entities.push(ent);
+        }
       }
     }
 

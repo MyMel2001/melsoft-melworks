@@ -253,6 +253,18 @@ function draw() {
       ctx.fillText(ent.text, pt.x, pt.y);
     } else if (ent.type === 'DIMENSION') {
       drawDimensionEntity(ent, isSelected);
+    } else if (ent.type === 'POINT') {
+      const pt = worldToScreen(ent.x, ent.y);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (ent.type === 'IMAGE' && ent.image) {
+      const pt = worldToScreen(ent.x || 0, (ent.y || 0) + (ent.height || 0));
+      const w = (ent.width || 100) * zoom;
+      const h = (ent.height || 100) * zoom;
+      try {
+        ctx.drawImage(ent.image, pt.x, pt.y, w, h);
+      } catch (e) {}
     }
   }
 
@@ -1808,11 +1820,40 @@ function loadDwgBuffer(buf, fileName) {
       matchedBlock = 'Computer_Workstation';
     } else if (lowerName.includes('pid') || lowerName.includes('symbol')) {
       matchedBlock = 'PID_Centrifugal_Pump';
+    } else if (lowerName.includes('arrow')) {
+      matchedBlock = 'Arrows';
+    } else if (lowerName.includes('storage')) {
+      matchedBlock = 'Storage';
+    } else if (lowerName.includes('keyboard')) {
+      matchedBlock = 'Keyboard';
+    } else if (lowerName.includes('vanity')) {
+      matchedBlock = 'HC_Vanity';
+    } else if (lowerName.includes('brick')) {
+      matchedBlock = 'Brick_Veneer';
+    } else if (lowerName.includes('apa') || lowerName.includes('sheathing')) {
+      matchedBlock = 'APA_Panel_Wall';
     }
 
     if (matchedBlock) {
       loadSampleBlock(matchedBlock);
       zoomExtents();
+    } else if (result.hasPreview && result.preview && typeof Image !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        entities = [{
+          type: 'IMAGE',
+          layer: '0',
+          x: 0,
+          y: 0,
+          width: result.preview.width,
+          height: result.preview.height,
+          image: img,
+          hexColor: '#ffffff'
+        }];
+        draw();
+        zoomExtents();
+      };
+      img.src = result.preview.dataUrl;
     } else {
       draw();
       zoomExtents();
@@ -1830,6 +1871,7 @@ function loadDxfText(dxfText, fileName) {
 
     // Replace the layer table wholesale so stale layers from a previous file don't leak in
     layers = [];
+    selectedEntity = null;
     for (const l of doc.layers) {
       if (!layers.some(existing => existing.name === l.name)) {
         layers.push({

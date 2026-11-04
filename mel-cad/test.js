@@ -124,7 +124,12 @@ assert.strictEqual(textEnt.text, 'MELCAD SPEC', 'TEXT content matches');
 const dimEnt = parsedDoc.entities.find(e => e.type === 'DIMENSION');
 assert(dimEnt, 'Parsed DIMENSION entity exists');
 assert.strictEqual(dimEnt.text, '36.00"', 'DIMENSION label matches');
-console.log('✔ AutoCAD DXF reader/writer roundtrip passed');
+
+// Test 2.2: DXF open truncation immunity (blank lines, comments, multi-entity preservation)
+const dxfWithBlankLines = '0\nSECTION\n2\nENTITIES\n\n999\nComment line\n0\nLINE\n8\nWALLS\n10\n0\n20\n0\n11\n10\n21\n10\n\n\n0\nLINE\n8\nWALLS\n10\n20\n20\n20\n11\n30\n21\n30\n0\nPOINT\n8\n0\n10\n5\n20\n5\n0\nENDSEC\n0\nEOF';
+const parsedMulti = DxfDocument.parse(dxfWithBlankLines);
+assert.strictEqual(parsedMulti.entities.length, 3, 'All entities parsed despite blank lines and comments (no truncation)');
+console.log('✔ AutoCAD DXF reader/writer roundtrip passed (non-truncation validated)');
 
 // 3. CAD Engine & Cleanroom Helpers Library Verification
 console.log('\n--- 3. Testing CAD Engine & Cleanroom Blocks ---');

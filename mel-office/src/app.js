@@ -507,7 +507,7 @@ function acceptFxEdit() {
   if (val.startsWith('=')) {
     excelSheets[currentSheetName][selectedCell] = { value: '', formula: val };
   } else {
-    excelSheets[currentSheetName][selectedCell] = { val, formula: '' };
+    excelSheets[currentSheetName][selectedCell] = { value: val, formula: '' };
   }
   recalcExcelGrid();
   const td = document.getElementById(`cell-${selectedCell}`);
@@ -572,8 +572,9 @@ function mergeSelectedCells() {
 // Multi-Sheet Tabs
 function switchSheet(sheetName, event) {
   currentSheetName = sheetName;
-  document.querySelectorAll('.sheet-tab').forEach(t => t.classList.remove('active'));
-  if (event && event.target && event.target.classList) event.target.classList.add('active');
+  document.querySelectorAll('.sheet-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.trim() === sheetName);
+  });
   recalcExcelGrid();
   selectCell('A1');
 }
@@ -1066,7 +1067,9 @@ async function handleFileOpen(event) {
     reader.readAsArrayBuffer(file);
   });
 
-  if (file.name.endsWith('.docx')) {
+  const fileNameLower = file.name.toLowerCase();
+
+  if (fileNameLower.endsWith('.docx')) {
       switchApp('word');
       try {
         const doc = await DocxDocument.fromBuffer(data);
@@ -1081,19 +1084,23 @@ async function handleFileOpen(event) {
       } catch (err) {
         alert('Failed to parse DOCX: ' + err.message);
       }
-    } else if (file.name.endsWith('.xlsx')) {
+    } else if (fileNameLower.endsWith('.xlsx')) {
       switchApp('excel');
       try {
         const sheet = await XlsxSpreadsheet.fromBuffer(data);
         // Overwrite excelSheets with loaded cells
         excelSheets = { [sheet.sheetName]: sheet.cells };
+        const tabsList = document.getElementById('sheet-tabs-list');
+        if (tabsList) {
+          tabsList.innerHTML = `<div class="sheet-tab active" onclick="switchSheet('${sheet.sheetName}')">${sheet.sheetName}</div>`;
+        }
         recalcExcelGrid(); // Refresh UI
         switchSheet(sheet.sheetName);
         alert(`Loaded Excel spreadsheet "${file.name}" with ${Object.keys(sheet.cells).length} cells.`);
       } catch (err) {
         alert('Failed to parse XLSX: ' + err.message);
       }
-    } else if (file.name.endsWith('.pptx')) {
+    } else if (fileNameLower.endsWith('.pptx')) {
       switchApp('ppt');
       try {
         const deck = await PptxPresentation.fromBuffer(data);
@@ -1105,9 +1112,11 @@ async function handleFileOpen(event) {
       } catch (err) {
         alert('Failed to parse PPTX: ' + err.message);
       }
-    } else if (file.name.toLowerCase().endsWith('.pdf')) {
+    } else if (fileNameLower.endsWith('.pdf')) {
       openPdfFile(file);
     }
+
+  event.target.value = '';
 }
 
 function saveDocument() {

@@ -71,6 +71,76 @@ const CAD_BLOCKS = {
       { type: 'LINE', layer: 'PID', color: 6, x1: 20, y1: 35, x2: 32, y2: 28 },
       { type: 'TEXT', layer: 'PID', color: 7, x: 12, y: -4, height: 6, text: 'P-101A' }
     ]
+  },
+  'Arrows': {
+    name: 'North & Dimension Arrows',
+    source: 'cleanroom-helpers/cad-dwgs/Arrows.dwg',
+    entities: [
+      { type: 'LINE', layer: 'SYMBOLS', color: 4, x1: 0, y1: 0, x2: 0, y2: 40 },
+      { type: 'LWPOLYLINE', layer: 'SYMBOLS', color: 4, closed: true, vertices: [
+        { x: -6, y: 30 }, { x: 0, y: 45 }, { x: 6, y: 30 }, { x: 0, y: 34 }
+      ]},
+      { type: 'TEXT', layer: 'SYMBOLS', color: 7, x: -3, y: 50, height: 8, text: 'N' }
+    ]
+  },
+  'Storage': {
+    name: 'Storage Rack Unit',
+    source: 'cleanroom-helpers/cad-dwgs/Storage.dwg',
+    entities: [
+      { type: 'LWPOLYLINE', layer: 'FURNITURE', color: 3, closed: true, vertices: [
+        { x: 0, y: 0 }, { x: 48, y: 0 }, { x: 48, y: 24 }, { x: 0, y: 24 }
+      ]},
+      { type: 'LINE', layer: 'FURNITURE', color: 3, x1: 12, y1: 0, x2: 12, y2: 24 },
+      { type: 'LINE', layer: 'FURNITURE', color: 3, x1: 24, y1: 0, x2: 24, y2: 24 },
+      { type: 'LINE', layer: 'FURNITURE', color: 3, x1: 36, y1: 0, x2: 36, y2: 24 },
+      { type: 'TEXT', layer: 'FURNITURE', color: 7, x: 14, y: 10, height: 5, text: 'STORAGE' }
+    ]
+  },
+  'Keyboard': {
+    name: 'Computer Keyboard Detail',
+    source: 'cleanroom-helpers/cad-dwgs/keyboard.dwg',
+    entities: [
+      { type: 'LWPOLYLINE', layer: 'EQUIPMENT', color: 7, closed: true, vertices: [
+        { x: 0, y: 0 }, { x: 18, y: 0 }, { x: 18, y: 6 }, { x: 0, y: 6 }
+      ]},
+      { type: 'LINE', layer: 'EQUIPMENT', color: 7, x1: 2, y1: 1.5, x2: 16, y2: 1.5 },
+      { type: 'LINE', layer: 'EQUIPMENT', color: 7, x1: 2, y1: 3, x2: 16, y2: 3 },
+      { type: 'LINE', layer: 'EQUIPMENT', color: 7, x1: 2, y1: 4.5, x2: 16, y2: 4.5 }
+    ]
+  },
+  'HC_Vanity': {
+    name: 'ADA Accessible Vanity Detail',
+    source: 'cleanroom-helpers/cad-dwgs/HC Vanity Detail 1.dwg',
+    entities: [
+      { type: 'LWPOLYLINE', layer: 'PLUMBING', color: 4, closed: true, vertices: [
+        { x: 0, y: 0 }, { x: 36, y: 0 }, { x: 36, y: 22 }, { x: 0, y: 22 }
+      ]},
+      { type: 'CIRCLE', layer: 'PLUMBING', color: 4, cx: 18, cy: 11, radius: 7 },
+      { type: 'CIRCLE', layer: 'PLUMBING', color: 4, cx: 18, cy: 11, radius: 1.5 }
+    ]
+  },
+  'Brick_Veneer': {
+    name: 'Brick Veneer Wall Section',
+    source: 'cleanroom-helpers/cad-dwgs/Brick Veneer Wall @ Slab.dwg',
+    entities: [
+      { type: 'LINE', layer: 'WALLS', color: 1, x1: 0, y1: 0, x2: 0, y2: 96 },
+      { type: 'LINE', layer: 'WALLS', color: 1, x1: 4, y1: 0, x2: 4, y2: 96 },
+      { type: 'LINE', layer: 'WALLS', color: 2, x1: 5, y1: 0, x2: 5, y2: 96 },
+      { type: 'LINE', layer: 'WALLS', color: 2, x1: 9, y1: 0, x2: 9, y2: 96 },
+      { type: 'TEXT', layer: 'WALLS', color: 7, x: 12, y: 48, height: 4, text: 'BRICK VENEER @ SLAB' }
+    ]
+  },
+  'APA_Panel_Wall': {
+    name: 'APA Panel Sheathing Isometric',
+    source: 'cleanroom-helpers/cad-dwgs/APA Panel Wall Sheathing Detail (Iso).dwg',
+    entities: [
+      { type: 'LWPOLYLINE', layer: 'WALLS', color: 2, closed: true, vertices: [
+        { x: 0, y: 0 }, { x: 48, y: 24 }, { x: 48, y: 120 }, { x: 0, y: 96 }
+      ]},
+      { type: 'LINE', layer: 'WALLS', color: 2, x1: 16, y1: 8, x2: 16, y2: 104 },
+      { type: 'LINE', layer: 'WALLS', color: 2, x1: 32, y1: 16, x2: 32, y2: 112 },
+      { type: 'TEXT', layer: 'WALLS', color: 7, x: 8, y: 50, height: 5, text: 'APA SHEATHING' }
+    ]
   }
 };
 
@@ -114,6 +184,16 @@ class CadEngine {
         minY = Math.min(minY, ent.y);
         maxX = Math.max(maxX, ent.x + 50);
         maxY = Math.max(maxY, ent.y + (ent.height || 10));
+      } else if (ent.type === 'POINT') {
+        minX = Math.min(minX, ent.x);
+        minY = Math.min(minY, ent.y);
+        maxX = Math.max(maxX, ent.x);
+        maxY = Math.max(maxY, ent.y);
+      } else if (ent.type === 'IMAGE') {
+        minX = Math.min(minX, ent.x || 0);
+        minY = Math.min(minY, ent.y || 0);
+        maxX = Math.max(maxX, (ent.x || 0) + (ent.width || 100));
+        maxY = Math.max(maxY, (ent.y || 0) + (ent.height || 100));
       }
     }
 

@@ -5,7 +5,7 @@
 * [FIXED] Does not clear canvas when opening files
 * [FIXED] Does not extend viewport when opening files
 * [FIXED] Does not zoom to fit when opening files
-* Files truncated on open(?)
+* [FIXED] Files truncated on open - DXF parser blank-line & comment desynchronization repaired; POLYLINE, MTEXT, POINT, SOLID, and DWG preview thumbnails supported.
 
 ## MelOffice
 
