@@ -116,4 +116,4 @@ cd mel-vu       && npm start
 ---
 
 ## License
-MIT
+SPL-R5
