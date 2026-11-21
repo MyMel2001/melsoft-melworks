@@ -678,6 +678,40 @@ function evaluateFormulaBrowser(expr, visited = new Set()) {
     return count;
   }
 
+  // LOOKUP(lookup_value, lookup_vector) - horizontal or vertical lookup
+  const lookupMatch = formula.match(/^LOOKUP\(([A-Z]+[0-9]+),\s*([A-Z]+)(\d+):([A-Z]+)(\d+)\)$/i);
+  if (lookupMatch) {
+    const colToNum = (s) => s.toUpperCase().split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0) - 1;
+    const lookupValue = lookupMatch[1].toUpperCase();
+    const startCol = lookupMatch[2].toUpperCase();
+    const startRow = parseInt(lookupMatch[3], 10);
+    const endCol = lookupMatch[4].toUpperCase();
+    const endRow = parseInt(lookupMatch[5], 10);
+    const lookupRef = lookupValue.match(/^([A-Z]+)(\d+)$/);
+    const lookupColNum = lookupRef ? colToNum(lookupRef[1]) : colToNum(startCol);
+    const lookupRowNum = lookupRef ? parseInt(lookupRef[2], 10) : startRow;
+    const lookupTarget = getCellValueBrowser(lookupValue, new Set());
+
+    if (startCol === endCol) {
+      // Vertical lookup - search down a column
+      for (let r = startRow; r <= endRow; r++) {
+        if (getCellValueBrowser(`${startCol}${r}`, new Set()) === lookupTarget) {
+          return getCellValueBrowser(`${colName(lookupColNum)}${r}`, new Set());
+        }
+      }
+    } else if (startRow === endRow) {
+      // Horizontal lookup - search across a row
+      const startC = colToNum(startCol);
+      const endC = colToNum(endCol);
+      for (let c = startC; c <= endC; c++) {
+        if (getCellValueBrowser(`${colName(c)}${startRow}`, new Set()) === lookupTarget) {
+          return getCellValueBrowser(`${colName(c)}${lookupRowNum}`, new Set());
+        }
+      }
+    }
+    return '';
+  }
+
   // IF(cond, trueVal, falseVal)
   const ifMatch = formula.match(/^IF\(([\s\S]*?),\s*([\s\S]*?),\s*([\s\S]*)\)$/i);
   if (ifMatch) {
