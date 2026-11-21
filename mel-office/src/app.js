@@ -869,12 +869,12 @@ function loadCurrentSlide() {
 
   const titleEl = document.getElementById('slide-title');
   if (titleEl) {
-    if (slide.titleSize) titleEl.style.fontSize = `${slide.titleSize}px`;
+    titleEl.style.fontSize = `${slide.titleSize || 36}px`;
     if (slide.titleBold) titleEl.style.fontWeight = '700';
   }
   const subtitleEl = document.getElementById('slide-subtitle');
   if (subtitleEl) {
-    if (slide.subtitleSize) subtitleEl.style.fontSize = `${slide.subtitleSize}px`;
+    subtitleEl.style.fontSize = `${slide.subtitleSize || 20}px`;
   }
 }
 
@@ -893,6 +893,8 @@ function promptAddSlide() {
     layout,
     title: `Slide ${pptSlides.length + 1}`,
     subtitle: 'Subtitle text',
+    titleSize: 36,
+    subtitleSize: 20,
     body,
     notes: '',
     bg: '#ffffff'
@@ -948,9 +950,11 @@ function renderSlideShowCurrent() {
   document.getElementById('show-subtitle').innerText = slide.subtitle || '';
   document.getElementById('show-body').innerHTML = slide.body || '';
   const showTitleEl = document.getElementById('show-title');
-  if (showTitleEl && slide.titleSize) showTitleEl.style.fontSize = `${slide.titleSize}px`;
+  if (showTitleEl) showTitleEl.style.fontSize = `${slide.titleSize || 36}px`;
   const showSubtitleEl = document.getElementById('show-subtitle');
-  if (showSubtitleEl && slide.subtitleSize) showSubtitleEl.style.fontSize = `${slide.subtitleSize}px`;
+  if (showSubtitleEl) showSubtitleEl.style.fontSize = `${slide.subtitleSize || 20}px`;
+  const showBodyEl = document.getElementById('show-body');
+  if (showBodyEl) showBodyEl.style.fontSize = `${slide.body ? (slide.body.includes('font-size') ? slide.body.match(/font-size:([\d.]+)px/)[1] : 22) : 22}px`;
   document.getElementById('slideshow-modal').style.backgroundColor = slide.bg === '#ffffff' ? '#0f172a' : slide.bg;
   document.getElementById('slideshow-footer').textContent = `Slide ${slideShowIndex + 1} of ${pptSlides.length} (Space/Arrow to advance, Esc to exit)`;
 }
@@ -1005,7 +1009,7 @@ function newDocument() {
       excelSheets[currentSheetName] = {};
       recalcExcelGrid();
     } else if (currentApp === 'ppt') {
-      pptSlides = [{ layout: 'title', title: 'New Presentation', subtitle: 'Subtitle', body: '<p>• Bullet point</p>', notes: '', bg: '#ffffff' }];
+      pptSlides = [{ layout: 'title', title: 'New Presentation', subtitle: 'Subtitle', titleSize: 36, subtitleSize: 20, body: '<p>• Bullet point</p>', notes: '', bg: '#ffffff' }];
       currentSlideIndex = 0;
       renderPptDeck();
     }
@@ -1138,7 +1142,7 @@ async function handleFileOpen(event) {
       switchApp('ppt');
       try {
         const deck = await PptxPresentation.fromBuffer(data);
-        pptSlides = deck.slides;
+        pptSlides = deck.slides.map(s => ({ ...s, bg: s.bg || s.background || '#ffffff' }));
         currentSlideIndex = 0;
         renderPptDeck();
         loadCurrentSlide();
