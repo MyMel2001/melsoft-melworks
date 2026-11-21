@@ -74,7 +74,7 @@ class MelFfmpeg {
     if (!Array.isArray(inputs) || inputs.length !== 2) throw new Error('crossfade requires exactly 2 inputs');
     const tr = getTransition(transition);
     const offset = Number((inputs && inputs[0] && inputs[0].duration) || 0) || duration;
-    const filter = '[i0:v][i1:v]xfade=transition=' + tr.filter + ':duration=' + duration + ':offset=' + offset + '[e0];[i0:a][i1:a]amix=inputs=2:duration=first:dropout_transition=2[e1]';
+    const filter = '[0:v][1:v]xfade=transition=' + tr.filter + ':duration=' + duration + ':offset=' + offset + '[e0];[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=2[e1]';
     const args = ['-y'];
     args.push('-i', inputs[0].inputPath);
     args.push('-i', inputs[1].inputPath);
@@ -131,10 +131,10 @@ class MelFfmpeg {
       segments.push(finalLabel);
     }
     const gradeVals = grade || {};
-    const hasGrade = Number(gradeVals.brightness) !== undefined || Number(gradeVals.contrast) !== undefined || Number(gradeVals.saturation) !== undefined || Number(gradeVals.hue) !== undefined;
+    const hasGrade = Number.isFinite(Number(gradeVals.brightness)) || Number.isFinite(Number(gradeVals.contrast)) || Number.isFinite(Number(gradeVals.saturation)) || Number.isFinite(Number(gradeVals.hue));
     if (hasGrade) {
       const parts = ['eq=brightness=' + fmtNum(Number(gradeVals.brightness) || 0) + ':contrast=' + fmtNum(Number(gradeVals.contrast) || 1) + ':saturation=' + fmtNum(Number(gradeVals.saturation) === undefined ? 1 : Number(gradeVals.saturation))];
-      if (Number(gradeVals.hue) !== undefined) parts.push('hue=h=' + fmtNum(Number(gradeVals.hue) || 0));
+      if (Number.isFinite(Number(gradeVals.hue)) && Number(gradeVals.hue) !== 0) parts.push('hue=h=' + fmtNum(Number(gradeVals.hue) || 0));
       segments.push(finalLabel + parts.join(',') + '[vout]');
       finalLabel = '[vout]';
     }
