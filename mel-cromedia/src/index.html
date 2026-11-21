@@ -91,13 +91,13 @@
               <button class="btn-ctrl" onclick="deleteActiveLayer()" title="Delete Layer" style="padding: 1px 5px;">-</button>
             </div>
           </div>
-          <div class="layers-list" id="layers-list">
+          <div class="layers-list" id="layers-list" oncontextmenu="handleLayerContextMenu(event)">
             <!-- Rendered dynamically -->
           </div>
         </div>
 
         <!-- Frame Track -->
-        <div class="timeline-track-container" id="timeline-track-container" onclick="handleTimelineClick(event)">
+        <div class="timeline-track-container" id="timeline-track-container" onclick="handleTimelineClick(event)" oncontextmenu="handleTimelineContextMenu(event)">
           <div class="frame-ruler" id="frame-ruler">
             <!-- Ruler numbers 1, 5, 10, 15... -->
           </div>
@@ -287,6 +287,9 @@
     <span id="flash-status-left">MelCromedia Pro | Flash Player 19 / AVM2 Compatible</span>
     <span id="flash-status-right">Stage: 800 x 600 @ 24 fps</span>
   </footer>
+
+  <!-- Timeline Right-Click Context Menu -->
+  <div id="timeline-context-menu" class="timeline-context-menu" style="display: none;"></div>
 
   <!-- Hidden Inputs -->
   <input type="file" id="file-fla-input" accept=".fla,.xfl,.zip" style="display: none;" onchange="handleOpenFla(event)">

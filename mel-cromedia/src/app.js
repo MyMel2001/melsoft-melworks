@@ -141,6 +141,7 @@ window.addEventListener('DOMContentLoaded', () => {
   renderTimeline();
   renderStage();
   setupShortcuts();
+  setupContextMenuDismiss();
 });
 
 function initProjectModel() {
@@ -265,6 +266,107 @@ function updatePlayhead() {
   document.getElementById('actionscript-input').value = (curFrameData && curFrameData.actions) ? curFrameData.actions : '';
   const easingSel = document.getElementById('sel-tween-easing');
   if (easingSel) easingSel.value = (curFrameData && curFrameData.ease) ? curFrameData.ease : 'linear';
+}
+
+// --- Timeline Right-Click Context Menu ---
+function hideTimelineContextMenu() {
+  const menu = document.getElementById('timeline-context-menu');
+  if (menu) menu.style.display = 'none';
+}
+
+function setupContextMenuDismiss() {
+  document.addEventListener('click', hideTimelineContextMenu);
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('#timeline-context-menu')) hideTimelineContextMenu();
+  });
+  document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('#timeline-context-menu')) hideTimelineContextMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideTimelineContextMenu();
+  });
+  window.addEventListener('blur', hideTimelineContextMenu);
+  document.addEventListener('scroll', hideTimelineContextMenu, true);
+}
+
+function showTimelineContextMenu(e, items) {
+  e.preventDefault();
+  e.stopPropagation();
+  const menu = document.getElementById('timeline-context-menu');
+  menu.innerHTML = '';
+  items.forEach(item => {
+    if (item === '-') {
+      const sep = document.createElement('div');
+      sep.className = 'timeline-context-sep';
+      menu.appendChild(sep);
+      return;
+    }
+    const el = document.createElement('div');
+    el.className = 'timeline-context-item';
+    el.innerHTML = `<span>${item.label}</span>${item.hint ? `<span class="timeline-context-hint">${item.hint}</span>` : ''}`;
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      hideTimelineContextMenu();
+      item.action();
+    });
+    menu.appendChild(el);
+  });
+  menu.style.display = 'block';
+  menu.style.left = '0px';
+  menu.style.top = '0px';
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.left = `${Math.max(0, Math.min(e.clientX, window.innerWidth - mw - 4))}px`;
+  menu.style.top = `${Math.max(0, Math.min(e.clientY, window.innerHeight - mh - 4))}px`;
+}
+
+function handleTimelineContextMenu(e) {
+  const rulerRect = document.getElementById('frame-ruler').getBoundingClientRect();
+  const frame = Math.max(0, Math.min(MAX_FRAMES - 1, Math.floor((e.clientX - rulerRect.left) / FRAME_CELL_WIDTH)));
+  const row = e.target.closest ? e.target.closest('.frame-row') : null;
+  if (row) {
+    const rows = Array.from(document.querySelectorAll('#frames-grid .frame-row'));
+    const layerIdx = rows.indexOf(row);
+    if (layerIdx >= 0 && layers[layerIdx]) selectLayer(layerIdx);
+  }
+  gotoFrame(frame);
+  const layer = layers[activeLayerIndex];
+  showTimelineContextMenu(e, [
+    { label: 'Insert Keyframe', hint: 'F6', action: () => insertKeyframe() },
+    { label: 'Insert Blank Keyframe', hint: 'F7', action: () => insertBlankKeyframe() },
+    '-',
+    { label: 'Create Classic Tween', action: () => createClassicTween() },
+    { label: 'Create Shape Tween', action: () => createShapeTween() },
+    '-',
+    { label: 'Clear Keyframe', action: () => {
+        if (!layer || !layer.frames) return;
+        layer.frames[frame] = null;
+        renderTimeline();
+        renderStage();
+      }
+    },
+    '-',
+    { label: 'Add Layer', action: () => addNewLayer() },
+    { label: 'Delete Layer', action: () => deleteActiveLayer() },
+    { label: (layer && layer.visible) ? 'Hide Layer' : 'Show Layer', action: () => toggleLayerVisibility(activeLayerIndex) },
+    { label: (layer && layer.locked) ? 'Unlock Layer' : 'Lock Layer', action: () => toggleLayerLock(activeLayerIndex) }
+  ]);
+}
+
+function handleLayerContextMenu(e) {
+  const item = e.target.closest ? e.target.closest('.layer-item') : null;
+  if (item) {
+    const items = Array.from(document.querySelectorAll('#layers-list .layer-item'));
+    const layerIdx = items.indexOf(item);
+    if (layerIdx >= 0 && layers[layerIdx]) selectLayer(layerIdx);
+  }
+  const layer = layers[activeLayerIndex];
+  showTimelineContextMenu(e, [
+    { label: 'Add Layer', action: () => addNewLayer() },
+    { label: 'Delete Layer', action: () => deleteActiveLayer() },
+    '-',
+    { label: (layer && layer.visible) ? 'Hide Layer' : 'Show Layer', action: () => toggleLayerVisibility(activeLayerIndex) },
+    { label: (layer && layer.locked) ? 'Unlock Layer' : 'Lock Layer', action: () => toggleLayerLock(activeLayerIndex) }
+  ]);
 }
 
 function handleTimelineClick(e) {
